@@ -261,12 +261,6 @@ class DFFReader {
 					const format = content.readDWORD();
 					content.rewind();
 					const rawFormat = content.readSection(4);
-
-					if (format & GeometryFormat.rpGEOMETRYTRISTRIP) {
-						console.log("Strip")
-					} else {
-						console.log("List");
-					}
 					
 					const numTriangles = content.readDWORD();
 					const numVertices = content.readDWORD();
@@ -344,7 +338,6 @@ class DFFReader {
 
 						// Colour information - Pre Lit Data
 						if ( (format & GeometryFormat.rpGEOMETRYPRELIT) ) {
-							console.log("Has Lighting Data");
 							// Read colour data
 							for (let i=0; i<numVertices; i++) {
 								const [r, g, b, a ] = content.readSection(4);
@@ -400,7 +393,6 @@ class DFFReader {
 						}
 
 						// Unknown (Morph Targets)
-						console.log(`Has ${numMorphTargets} morph targets`);
 						for (let i=0; i<numMorphTargets; i++) {
 							const boundingSphereX = content.readFloat();
 							const boundingSphereY = content.readFloat();
@@ -431,7 +423,6 @@ class DFFReader {
 
 						// Normal Information
 						if (format & GeometryFormat.rpGEOMETRYNORMALS) {
-							console.log("Has normal data")
 							for (let i=0; i<numVertices; i++) {
 								const x = content.readFloat();
 								const y = content.readFloat();
@@ -640,7 +631,6 @@ class DFFReader {
 		const geometry = this.searchChunk<GeometryChunk>(this.parsed, ChunkTypes.Geometry);
 
 		const atomics = this.searchChunk<AtomicChunk>(this.parsed, ChunkTypes.Atomic);
-		console.log(`Found ${atomics.length} atomic`);
 
 		for (let atomic of atomics) {
 			if (!atomic.parsed) {
@@ -651,7 +641,6 @@ class DFFReader {
 			const targetFrame = frames[atomic.parsed.frameIndex];
 
 			const materials = this.searchChunk(targetGeometry, ChunkTypes.Material);
-			const geoIndex = geometry.indexOf(targetGeometry);
 
 			let geoName = targetFrame.parsed?.name || "Unknown Geometry";
 
