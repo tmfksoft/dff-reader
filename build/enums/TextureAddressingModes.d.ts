@@ -1,0 +1,8 @@
+declare enum TextureAddressingModes {
+    TEXTUREADDRESSNATEXTUREADDRESS = 0,
+    TEXTUREADDRESSWRAP = 1,
+    TEXTUREADDRESSMIRROR = 2,
+    TEXTUREADDRESSCLAMP = 3,
+    TEXTUREADDRESSBORDER = 4
+}
+export default TextureAddressingModes;

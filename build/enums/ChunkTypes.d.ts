@@ -1,0 +1,27 @@
+declare enum ChunkTypes {
+    Struct = 1,
+    String = 2,
+    Extension = 3,
+    Texture = 6,
+    Material = 7,
+    Material_List = 8,
+    Frame_List = 14,
+    Geometry = 15,
+    Clump = 16,
+    Atomic = 20,
+    Geometry_List = 26,
+    Right_To_Render = 31,
+    HAnim_PLG = 286,
+    Material_Effects_PLG = 288,
+    Bin_Mesh_PLG = 1294,
+    Native_Data_PLG = 1296,
+    Pipeline_Set = 39056115,
+    Specular_Material = 39056118,
+    Effect_2D = 39056120,
+    Extra_Vert_Colour = 39056121,
+    Collision_Model = 39056122,
+    Reflection_Material = 39056124,
+    Breakable = 39056125,
+    Frame = 39056126
+}
+export default ChunkTypes;

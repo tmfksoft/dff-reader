@@ -1,0 +1,5 @@
+node_modules
+
+# Used in testing
+temp
+obj
