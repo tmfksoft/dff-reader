@@ -10,6 +10,7 @@ import Geometry from "./interfaces/Geometry";
 import GeometryChunk from "./interfaces/chunks/GeometryChunk";
 import Material from "./interfaces/Material";
 import AtomicChunk from "./interfaces/chunks/AtomicChunk";
+import FrameListChunk from "./interfaces/chunks/FrameListChunk";
 
 class DFFReader {
 
@@ -630,6 +631,7 @@ class DFFReader {
 		const frames = this.searchChunk<{ name: string }>(this.parsed, ChunkTypes.Frame);
 		const geometry = this.searchChunk<GeometryChunk>(this.parsed, ChunkTypes.Geometry);
 
+		const frameList = this.searchChunk<FrameListChunk>(this.parsed, ChunkTypes.Frame_List);
 		const atomics = this.searchChunk<AtomicChunk>(this.parsed, ChunkTypes.Atomic);
 
 		for (let atomic of atomics) {
@@ -639,12 +641,28 @@ class DFFReader {
 
 			const targetGeometry = geometry[atomic.parsed.geometryIndex];
 			const targetFrame = frames[atomic.parsed.frameIndex];
+			const frameListData = frameList[0].parsed?.frames[atomic.parsed.frameIndex];
 
 			const materials = this.searchChunk(targetGeometry, ChunkTypes.Material);
 
 			let geoName = targetFrame.parsed?.name || "Unknown Geometry";
 
+			const defaultPosition = { x: 0, y: 0, z: 0 };
+			const defaultRotationMatrix = {
+				right: { x: 0, y: 0, z: 0 },
+				up: { x: 0, y: 0, z: 0 },
+				at: { x: 0, y: 0, z: 0 },
+			};
+			const defaultParentIndex = -1;
+			const defaultMatrixFlags = 0;
+
 			if (targetGeometry.parsed) {
+
+				const position = frameListData && frameListData.position || defaultPosition;
+				const rotationMatrix = frameListData && frameListData.rotationMatrix || defaultRotationMatrix;
+				const parentIndex = frameListData && frameListData.parentIndex || defaultParentIndex;
+				const matrixFlags = frameListData && frameListData.matrixFlags || defaultMatrixFlags;
+
 				geometryList.push({
 					name: geoName,
 					...targetGeometry.parsed,
@@ -660,6 +678,10 @@ class DFFReader {
 							...m.parsed
 						};
 					}),
+					position,
+					rotationMatrix,
+					parentIndex,
+					matrixFlags,
 				});
 			}
 			

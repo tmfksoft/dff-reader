@@ -517,10 +517,11 @@ class DFFReader {
         return matching;
     }
     getGeometry() {
-        var _a;
+        var _a, _b;
         const geometryList = [];
         const frames = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame);
         const geometry = this.searchChunk(this.parsed, ChunkTypes_1.default.Geometry);
+        const frameList = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame_List);
         const atomics = this.searchChunk(this.parsed, ChunkTypes_1.default.Atomic);
         for (let atomic of atomics) {
             if (!atomic.parsed) {
@@ -528,16 +529,32 @@ class DFFReader {
             }
             const targetGeometry = geometry[atomic.parsed.geometryIndex];
             const targetFrame = frames[atomic.parsed.frameIndex];
+            const frameListData = (_a = frameList[0].parsed) === null || _a === void 0 ? void 0 : _a.frames[atomic.parsed.frameIndex];
             const materials = this.searchChunk(targetGeometry, ChunkTypes_1.default.Material);
-            let geoName = ((_a = targetFrame.parsed) === null || _a === void 0 ? void 0 : _a.name) || "Unknown Geometry";
+            let geoName = ((_b = targetFrame.parsed) === null || _b === void 0 ? void 0 : _b.name) || "Unknown Geometry";
+            const defaultPosition = { x: 0, y: 0, z: 0 };
+            const defaultRotationMatrix = {
+                right: { x: 0, y: 0, z: 0 },
+                up: { x: 0, y: 0, z: 0 },
+                at: { x: 0, y: 0, z: 0 },
+            };
+            const defaultParentIndex = -1;
+            const defaultMatrixFlags = 0;
             if (targetGeometry.parsed) {
+                const position = frameListData && frameListData.position || defaultPosition;
+                const rotationMatrix = frameListData && frameListData.rotationMatrix || defaultRotationMatrix;
+                const parentIndex = frameListData && frameListData.parentIndex || defaultParentIndex;
+                const matrixFlags = frameListData && frameListData.matrixFlags || defaultMatrixFlags;
                 geometryList.push(Object.assign(Object.assign({ name: geoName }, targetGeometry.parsed), { materials: materials.filter(m => (m.parsed)).map(m => {
                         const textures = this.searchChunk(m, ChunkTypes_1.default.Texture);
                         if (textures.length > 0) {
                             return Object.assign(Object.assign({}, m.parsed), { texture: textures.map(m => m.parsed)[0] });
                         }
                         return Object.assign({}, m.parsed);
-                    }) }));
+                    }), position,
+                    rotationMatrix,
+                    parentIndex,
+                    matrixFlags }));
             }
         }
         return geometryList;
