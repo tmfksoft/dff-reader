@@ -3,6 +3,7 @@ import PointerBuffer from "./PointerBuffer";
 import ChunkTypes from "./enums/ChunkTypes";
 import RawChunk from "./interfaces/RawChunk";
 import Geometry from "./interfaces/Geometry";
+import GeometryNode from "./interfaces/GeometryNode";
 declare class DFFReader {
     protected data: Buffer;
     rawData: PointerBuffer;
@@ -30,5 +31,6 @@ declare class DFFReader {
         obj: Buffer;
         mtl: Buffer;
     };
+    getNode(): GeometryNode;
 }
 export default DFFReader;

@@ -652,6 +652,71 @@ class DFFReader {
             mtl: Buffer.from(mtlLines.join('\r\n')),
         };
     }
+    getNode() {
+        const frameNodes = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame);
+        const atomicNodes = this.searchChunk(this.parsed, ChunkTypes_1.default.Atomic);
+        const frameLists = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame_List);
+        const parsedGeometry = this.getGeometry();
+        const mainNodes = [];
+        if (frameLists.length > 1) {
+            throw new Error("More than a single frame list, unexpected");
+        }
+        const frameList = frameLists[0];
+        if (frameList.parsed) {
+            for (let myIndex = 0; myIndex < frameList.parsed.frameCount; myIndex++) {
+                const frame = frameList.parsed.frames[myIndex];
+                if (frame.parentIndex >= 0) {
+                    continue;
+                }
+                const getChildren = (parentIndex, depth = 0) => {
+                    if (!frameList.parsed) {
+                        return [];
+                    }
+                    if (depth > 1000) {
+                        return [];
+                    }
+                    const children = [];
+                    // Find child nodes
+                    for (let mi = 0; mi < frameList.parsed.frameCount; mi++) {
+                        const fr = frameList.parsed.frames[mi];
+                        if (fr.parentIndex !== parentIndex) {
+                            continue;
+                        }
+                        const mFrame = frameNodes[mi];
+                        const mNode = {
+                            name: mFrame.parsed && mFrame.parsed.name || "",
+                            children: getChildren(mi, depth + 1),
+                            position: fr.position,
+                            rotationMatrix: fr.rotationMatrix,
+                            matrixFlags: fr.matrixFlags,
+                        };
+                        children.push(mNode);
+                    }
+                    for (let atomic of atomicNodes) {
+                        if (!atomic.parsed) {
+                            continue;
+                        }
+                        if (atomic.parsed.frameIndex !== parentIndex) {
+                            continue;
+                        }
+                        const geometry = parsedGeometry[atomic.parsed.geometryIndex];
+                        children.push(geometry);
+                    }
+                    return children;
+                };
+                const myFrame = frameNodes[myIndex];
+                const myNode = {
+                    name: myFrame.parsed && myFrame.parsed.name || "",
+                    children: getChildren(myIndex),
+                    position: frame.position,
+                    rotationMatrix: frame.rotationMatrix,
+                    matrixFlags: frame.matrixFlags,
+                };
+                mainNodes.push(myNode);
+            }
+        }
+        return mainNodes[0];
+    }
 }
 exports.default = DFFReader;
 //# sourceMappingURL=index.js.map

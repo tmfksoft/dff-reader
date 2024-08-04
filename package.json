@@ -1,12 +1,13 @@
 {
   "name": "@majesticfudgie/dff-reader",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "build/index.js",
   "license": "MIT",
   "typings": "build/index.d.ts",
   "scripts": {
     "start": "node .",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "tsc && node build/example.js"
   },
   "devDependencies": {
     "@types/node": "^20.14.11"
