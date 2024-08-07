@@ -14,6 +14,7 @@ enum ChunkTypes {
     Frame_List = 0x0000000E,           // https://gtamods.com/wiki/Frame_List_(RW_Section)
     Geometry = 0x0000000F,             // https://gtamods.com/wiki/RpGeometry
     Clump = 0x00000010,                // https://gtamods.com/wiki/RpClump
+    Light = 0x00000012,                // https://gtamods.com/wiki/Light_(RW_Section)
     Atomic = 0x00000014,               // https://gtamods.com/wiki/Atomic_(RW_Section)
     Geometry_List = 0x0000001A,        // https://gtamods.com/wiki/Geometry_List_(RW_Section)
     Right_To_Render = 0x0000001F,      // https://gtamods.com/wiki/Right_To_Render_(RW_Section)

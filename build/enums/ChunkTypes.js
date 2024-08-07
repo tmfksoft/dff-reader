@@ -15,6 +15,7 @@ var ChunkTypes;
     ChunkTypes[ChunkTypes["Frame_List"] = 14] = "Frame_List";
     ChunkTypes[ChunkTypes["Geometry"] = 15] = "Geometry";
     ChunkTypes[ChunkTypes["Clump"] = 16] = "Clump";
+    ChunkTypes[ChunkTypes["Light"] = 18] = "Light";
     ChunkTypes[ChunkTypes["Atomic"] = 20] = "Atomic";
     ChunkTypes[ChunkTypes["Geometry_List"] = 26] = "Geometry_List";
     ChunkTypes[ChunkTypes["Right_To_Render"] = 31] = "Right_To_Render";

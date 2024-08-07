@@ -20,11 +20,16 @@ const _1 = __importDefault(require("."));
 function start() {
     return __awaiter(this, void 0, void 0, function* () {
         const tempDir = path_1.default.join(__dirname, "..", "temp");
-        const bansheeFile = path_1.default.join(tempDir, "aw_streettree2.dff");
+        // Bug with loading animated models ahead :(
+        // xenonsign2_SFSe
+        // BS_building_SFS - Burger shot?
+        const modelName = "bs_building_sfs";
+        const bansheeFile = path_1.default.join(tempDir, modelName + ".dff");
         const bansheeData = fs_1.default.readFileSync(bansheeFile);
         const dff = new _1.default(bansheeData);
-        fs_1.default.writeFileSync(path_1.default.join(tempDir, "aw_streettree2.json"), JSON.stringify(dff.stripData(dff.parsed), null, '\t'));
-        fs_1.default.writeFileSync(path_1.default.join(tempDir, "aw_streettree2_test.json"), JSON.stringify(dff.getNode(), null, '\t'));
+        fs_1.default.writeFileSync(path_1.default.join(tempDir, modelName + ".json"), JSON.stringify(dff.stripData(dff.parsed), null, '\t'));
+        fs_1.default.writeFileSync(path_1.default.join(tempDir, modelName + "_test.json"), JSON.stringify(dff.getNode(), null, '\t'));
+        // Test write OBJ and MTL
     });
 }
 start();

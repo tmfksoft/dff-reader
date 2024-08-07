@@ -24,6 +24,7 @@ declare class DFFReader {
     searchChunk<T = any>(chunk: RawChunk, type: ChunkTypes): RawChunk<T>[];
     getGeometry(): Geometry[];
     /**
+     * @deprecated - This doesn't produce a faithful model anymore!
      * Converts the supplied Geometry to a OBJ and its accompanying Material.
      * @param geometry
      */

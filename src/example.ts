@@ -15,14 +15,20 @@ import GeometryNode from './interfaces/GeometryNode';
 async function start() {
 	const tempDir = path.join(__dirname, "..", "temp");
 	
+	// Bug with loading animated models ahead :(
+	// xenonsign2_SFSe
+	// BS_building_SFS - Burger shot?
 
-	const bansheeFile = path.join(tempDir, "aw_streettree2.dff");
+	const modelName = "bs_building_sfs";
+
+	const bansheeFile = path.join(tempDir, modelName + ".dff");
 	const bansheeData = fs.readFileSync(bansheeFile);
 
 	const dff = new DFFReader(bansheeData);
 
-	fs.writeFileSync(path.join(tempDir, "aw_streettree2.json"), JSON.stringify(dff.stripData(dff.parsed), null, '\t'));
+	fs.writeFileSync(path.join(tempDir, modelName + ".json"), JSON.stringify(dff.stripData(dff.parsed), null, '\t'));
+	fs.writeFileSync(path.join(tempDir, modelName + "_test.json"), JSON.stringify(dff.getNode(), null, '\t'));
 
-	fs.writeFileSync(path.join(tempDir, "aw_streettree2_test.json"), JSON.stringify(dff.getNode(), null, '\t'));
+	// Test write OBJ and MTL
 }
 start();

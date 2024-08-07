@@ -8,6 +8,7 @@ declare enum ChunkTypes {
     Frame_List = 14,
     Geometry = 15,
     Clump = 16,
+    Light = 18,
     Atomic = 20,
     Geometry_List = 26,
     Right_To_Render = 31,

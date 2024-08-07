@@ -635,6 +635,18 @@ class DFFReader {
 		const frameList = this.searchChunk<FrameListChunk>(this.parsed, ChunkTypes.Frame_List);
 		const atomics = this.searchChunk<AtomicChunk>(this.parsed, ChunkTypes.Atomic);
 
+		if (frameList.length !== 1) {
+			throw new Error("Expected 1 FrameList but found " + frameList.length);
+		}
+
+		if (!frameList[0].parsed) {
+			throw new Error("FrameList missing parsed data section!");
+		}
+
+		if (frameList[0].parsed.frameCount !== frames.length) {
+			console.warn("Frame count mismatch. Different amount of frames than FrameList suggests.");
+		}
+
 		for (let atomic of atomics) {
 			if (!atomic.parsed) {
 				continue;
@@ -645,8 +657,11 @@ class DFFReader {
 			const frameListData = frameList[0].parsed?.frames[atomic.parsed.frameIndex];
 
 			const materials = this.searchChunk(targetGeometry, ChunkTypes.Material);
-
-			let geoName = targetFrame.parsed?.name || "Unknown Geometry";
+			
+			let geoName = "Unknown Frame";
+			if (targetFrame && targetFrame.parsed) {
+				geoName = targetFrame.parsed?.name
+			}
 
 			const defaultPosition = { x: 0, y: 0, z: 0 };
 			const defaultRotationMatrix = {
@@ -692,6 +707,7 @@ class DFFReader {
 	}
 
 	/**
+	 * @deprecated - This doesn't produce a faithful model anymore!
 	 * Converts the supplied Geometry to a OBJ and its accompanying Material.
 	 * @param geometry 
 	 */
@@ -843,8 +859,12 @@ class DFFReader {
 						}
 	
 						const mFrame = frameNodes[mi];
+						let frameName = "Unknown Frame";
+						if (mFrame && mFrame.parsed) {
+							frameName = mFrame.parsed.name;
+						}
 						const mNode: GeometryNode = {
-							name: mFrame.parsed && mFrame.parsed.name || "",
+							name: frameName,
 							children: getChildren(mi, depth + 1),
 	
 							position: fr.position,
