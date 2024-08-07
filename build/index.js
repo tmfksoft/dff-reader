@@ -473,6 +473,35 @@ class DFFReader {
                 }
             }
         }
+        else if (chunk.type == ChunkTypes_1.default.HAnim_PLG) {
+            const content = new PointerBuffer_1.default(chunk.data);
+            const hAnimVersion = content.readUint32(); // Expecting '256', aka 0x100 (v1.0)
+            const nodeId = content.readUint32();
+            const numNodes = content.readUint32();
+            chunk.parsed = {
+                hAnimVersion,
+                nodeId,
+                numNodes,
+            };
+            // I'm not honestly sure if this is correct, the Wiki is a little vague.
+            if (numNodes > 0) {
+                const flags = content.readUint32();
+                const keyFrameSize = content.readUint32();
+                const keyFrames = [];
+                // 12 bytes to a frame
+                const frameCount = numNodes;
+                // I haven't a clue what to do here.
+                for (let i = 0; i < frameCount; i++) {
+                    keyFrames.push({
+                        nodeId: content.readUint32(),
+                        nodeIndex: content.readUint32(),
+                        flags: content.readUint32(),
+                    });
+                }
+                chunk.parsed = Object.assign(Object.assign({}, chunk.parsed), { flags,
+                    keyFrameSize, nodes: keyFrames });
+            }
+        }
         return chunk;
     }
     stripData(chunk) {
@@ -517,11 +546,12 @@ class DFFReader {
         return matching;
     }
     getGeometry() {
-        var _a, _b;
+        var _a;
         const geometryList = [];
         const frames = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame);
         const geometry = this.searchChunk(this.parsed, ChunkTypes_1.default.Geometry);
         const frameList = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame_List);
+        const frameExtensions = this.searchChunk(frameList[0], ChunkTypes_1.default.Extension);
         const atomics = this.searchChunk(this.parsed, ChunkTypes_1.default.Atomic);
         if (frameList.length !== 1) {
             throw new Error("Expected 1 FrameList but found " + frameList.length);
@@ -538,10 +568,23 @@ class DFFReader {
             const frameListData = (_a = frameList[0].parsed) === null || _a === void 0 ? void 0 : _a.frames[atomic.parsed.frameIndex];
             const materials = this.searchChunk(targetGeometry, ChunkTypes_1.default.Material);
             // A DFF isn't guaranteed to have as many frames as its frame count.
+            // Though I feel I should be looking at Extension chunks instead of frames
+            // They seem to a better 'container' for frame and animation data.
             let geoName = "Unknown Frame";
             if (targetFrame && targetFrame.parsed) {
-                geoName = (_b = targetFrame.parsed) === null || _b === void 0 ? void 0 : _b.name;
+                geoName = targetFrame.parsed.name;
             }
+            // This is possibly the proper way to get the name?
+            const targetExtension = frameExtensions[atomic.parsed.frameIndex];
+            const extensionFrames = this.searchChunk(targetExtension, ChunkTypes_1.default.Frame);
+            if (extensionFrames) {
+                if (extensionFrames.length > 0) {
+                    if (extensionFrames[0].parsed) {
+                        geoName = extensionFrames[0].parsed.name;
+                    }
+                }
+            }
+            const hAnim = this.searchChunk(targetExtension, ChunkTypes_1.default.HAnim_PLG);
             const defaultPosition = { x: 0, y: 0, z: 0 };
             const defaultRotationMatrix = {
                 right: { x: 0, y: 0, z: 0 },
@@ -564,7 +607,7 @@ class DFFReader {
                     }), position,
                     rotationMatrix,
                     parentIndex,
-                    matrixFlags }));
+                    matrixFlags, animData: hAnim.length > 0 && hAnim[0].parsed || undefined }));
             }
         }
         return geometryList;
@@ -693,6 +736,7 @@ class DFFReader {
                         if (fr.parentIndex !== parentIndex) {
                             continue;
                         }
+                        // This should probably use the Extension chunks instead.
                         const mFrame = frameNodes[mi];
                         let frameName = "Unknown Frame";
                         if (mFrame && mFrame.parsed) {

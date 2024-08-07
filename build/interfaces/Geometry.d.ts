@@ -53,4 +53,5 @@ export default interface Geometry {
     };
     parentIndex: number;
     matrixFlags: number;
+    animData: any;
 }

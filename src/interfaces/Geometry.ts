@@ -38,4 +38,8 @@ export default interface Geometry {
 	},
 	parentIndex: number,
 	matrixFlags: number,
+
+	// Currently I don't have any understanding how this works
+	// so I'll bodge the data in and worry about it later
+	animData: any,
 }
