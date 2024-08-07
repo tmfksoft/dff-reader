@@ -529,9 +529,6 @@ class DFFReader {
         if (!frameList[0].parsed) {
             throw new Error("FrameList missing parsed data section!");
         }
-        if (frameList[0].parsed.frameCount !== frames.length) {
-            console.warn("Frame count mismatch. Different amount of frames than FrameList suggests.");
-        }
         for (let atomic of atomics) {
             if (!atomic.parsed) {
                 continue;
@@ -540,6 +537,7 @@ class DFFReader {
             const targetFrame = frames[atomic.parsed.frameIndex];
             const frameListData = (_a = frameList[0].parsed) === null || _a === void 0 ? void 0 : _a.frames[atomic.parsed.frameIndex];
             const materials = this.searchChunk(targetGeometry, ChunkTypes_1.default.Material);
+            // A DFF isn't guaranteed to have as many frames as its frame count.
             let geoName = "Unknown Frame";
             if (targetFrame && targetFrame.parsed) {
                 geoName = (_b = targetFrame.parsed) === null || _b === void 0 ? void 0 : _b.name;
