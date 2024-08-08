@@ -1,3 +1,4 @@
+import Base2DEffectChunk from "./chunks/2DEffectChunk";
 import Material from "./Material";
 import Triangle from "./Triangle";
 
@@ -25,6 +26,7 @@ export default interface Geometry {
 	uvs: { u: number, v: number }[][],
 
 	materials: Material[],
+	effect?: Base2DEffectChunk,
 
 	rotationMatrix: {
 		right: { x: number, y: number, z: number },

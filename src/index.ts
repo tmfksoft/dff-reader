@@ -1043,6 +1043,16 @@ class DFFReader {
 				const parentIndex = frameListData && frameListData.parentIndex || defaultParentIndex;
 				const matrixFlags = frameListData && frameListData.matrixFlags || defaultMatrixFlags;
 
+				const twoFX = this.searchChunk<Base2DEffectChunk>(targetGeometry, ChunkTypes.Effect_2D);
+
+				let effect: Base2DEffectChunk | undefined;
+
+				if (twoFX.length > 0) {
+					if (twoFX[0].parsed) {
+						effect = twoFX[0].parsed;
+					}
+				}
+ 
 				geometryList.push({
 					name: geoName,
 					...targetGeometry.parsed,
@@ -1058,6 +1068,7 @@ class DFFReader {
 							...m.parsed
 						};
 					}),
+					effect,
 					position,
 					rotationMatrix,
 					parentIndex,

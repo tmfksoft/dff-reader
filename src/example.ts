@@ -13,7 +13,7 @@ async function start() {
 	// xenonsign2_SFSe
 	// BS_building_SFS - Burger shot?
 
-	const modelName = "cxrf_frway1sig";
+	const modelName = "mlamppost";
 
 	const bansheeFile = path.join(tempDir, modelName + ".dff");
 	const bansheeData = fs.readFileSync(bansheeFile);
