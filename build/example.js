@@ -23,11 +23,12 @@ function start() {
         // Bug with loading animated models ahead :(
         // xenonsign2_SFSe
         // BS_building_SFS - Burger shot?
-        const modelName = "bs_building_sfs";
+        const modelName = "cxrf_frway1sig";
         const bansheeFile = path_1.default.join(tempDir, modelName + ".dff");
         const bansheeData = fs_1.default.readFileSync(bansheeFile);
         const dff = new _1.default(bansheeData);
         fs_1.default.writeFileSync(path_1.default.join(tempDir, modelName + ".json"), JSON.stringify(dff.stripData(dff.parsed), null, '\t'));
+        //fs.writeFileSync(path.join(tempDir, modelName + ".json"), JSON.stringify(dff.parsed, null, '\t'));
         fs_1.default.writeFileSync(path_1.default.join(tempDir, modelName + "_test.json"), JSON.stringify(dff.getNode(), null, '\t'));
         // Test write OBJ and MTL
     });

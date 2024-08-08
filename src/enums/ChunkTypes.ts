@@ -22,6 +22,7 @@ enum ChunkTypes {
     Material_Effects_PLG = 0x00000120, // https://gtamods.com/wiki/Material_Effects_PLG_(RW_Section)
     Bin_Mesh_PLG = 0x0000050E,         // https://gtamods.com/wiki/Bin_Mesh_PLG_(RW_Section)
     Native_Data_PLG = 0x00000510,      // https://gtamods.com/wiki/Native_Data_PLG_(RW_Section)
+    
     // Rockstar Custom Sections
     Pipeline_Set = 0x0253F2F3,         // https://gtamods.com/wiki/Pipeline_Set_(RW_Section)
     Specular_Material = 0x0253F2F6,    // https://gtamods.com/wiki/Specular_Material_(RW_Section)

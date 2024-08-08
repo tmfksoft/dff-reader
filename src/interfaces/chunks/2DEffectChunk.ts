@@ -1,43 +1,109 @@
 // Created using https://gtamods.com/wiki/2d_Effect_(RW_Section)
+// This is probably one of the more complicated chunks
 
-interface Base2DEffectChunk {
+export interface Base2DEffectEntry {
 	position: { x: number, y: number, z: number },
-	entryType: number,
+	entryType: EntryType,
 }
 
-interface Light2DEffectChunk extends Base2DEffectChunk {
-	entryType: 0,
+export enum EntryType {
+	Light = 0,
+	ParticleEffect = 1,
+	// 2?
+	PedAttractor = 3,
+	SunGlare = 4, // No idea where or how this is used
+	// 5?
+	EnterExit = 6,
+	StreetSign = 7,
+	TriggerPoint = 8,
+	CoverPoint = 9,
+	Escalator = 10,
+}
+/**
+ * 2D Light Entry
+ */
+
+export enum LightFlags1 {
+	CORONA_CHECK_OBSTACLES = 1,
+	FOG_TYPE_2 = 2,
+	FOG_TYPE_4 = 4,
+	WITHOUT_CORONA = 8,
+	CORONA_ONLY_AT_LONG_DISTANCE = 16,
+	AT_DAY = 32,
+	AT_NIGHT = 64,
+	BLINKING1 = 128,
+}
+export enum LightFlags2 {
+	CORONA_ONLY_FROM_BELOW = 1,
+	BLINKING2 = 2,
+	UPDATE_HEIGHT_ABOVE_GROUND = 4,
+	CHECK_DIRECTION = 8,
+	BLINKING3 = 16,
+}
+export enum LightCoronaShowMode {
+	DEFAULT,
+	RANDOM_FLASHING,
+	RANDOM_FLASHING_ALWAYS_AT_WET_WEATHER,
+	LIGHTS_ANIM_SPEED_4X,					// Used on model 10 green bottles. Lights alternately switched on-off.
+	LIGHTS_ANIM_SPEED_2X,					// Used on skyscrapers in San Fierro
+	LIGHTS_ANIM_SPEED_1x,
+	WARNLIGHT,								// Used on model nt_roadblockci
+	TRAFFICLIGHT,
+	TRAINCROSSLIGHT,
+	UNKNOWN,								// Doesn't work (light is always disabled)
+	AT_RAIN_ONLY,							// Enables only in rainy weather
+	TIME_5_5,								// 5s on, 5s off
+	TIME_6_4_12,							// 6s on, 4s off
+	TIME_6_4_13,							// 6s on, 4s off
+}
+export interface Light2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.Light,
 	color: { r: number, g: number, b: number, a: number },
 	coronaFarClip: number,
 	pointLightRange: number,
 	coronaSize: number,
 	shadowSize: number,
-	coronaShowMode: number,
+	coronaShowMode: LightCoronaShowMode,
 	coronaEnableReflection: number,
 	coronaFlareType: number, // Needs an enum
 	shadowColorMultiplier: number,
-	flags1: number, // Needs an enum
+	flags1: LightFlags1, // Needs an enum
 	coronaTexName: string,
 	shadowTexName: string,
 	shadowZDistance: number,
-	flags2: number, // Needs an enum
+	flags2: LightFlags2, // Needs an enum
 
 }
-interface ExtendedLight2DEffectChunk extends Light2DEffectChunk {
-	lookDirectionX: number,
-	lookDirectionY: number,
-	lookDirectionZ: number,
+export interface ExtendedLight2DEffectEntry extends Base2DEffectEntry {
+	lookDirection: {
+		x: number,
+		y: number,
+		z: number,
+	}
 }
 
-interface Particle2DEffectChunk extends Base2DEffectChunk {
-	entryType: 1,
+export interface Particle2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.ParticleEffect,
 	particleName: string,
 }
 
-interface PedAttractor2DEffectChunk extends Base2DEffectChunk {
-	entryType: 3,
+export enum PedAttractorType {
+	PED_ATM_ATTRACTOR,
+	PED_SEAT_ATTRACTOR,
+	PED_STOP_ATTRACTOR,
+	PED_PIZZA_ATTRACTOR,
+	PED_SHELTER_ATTRACTOR,
+	PED_TRIGGER_SCRIPT_ATTRACTOR,
+	PED_LOOK_AT_ATTRACTOR,
+	PED_SCRIPTED_ATTRACTOR,
+	PED_PARK_ATTRACTOR,
+	PED_STEP_ATTRACTOR,
+}
 
-	type: number, // Needs an enum for "Ped attractor types"
+export interface PedAttractor2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.PedAttractor,
+
+	attractorType: PedAttractorType, // Needs an enum for "Ped attractor types"
 
 	// Assumed to be Eulers
 	queueDir: { x: number, y: number, z: number },
@@ -47,16 +113,21 @@ interface PedAttractor2DEffectChunk extends Base2DEffectChunk {
 	externalScriptName: string,
 	pedExistingProbability: number, // Eh?
 
+	// I'll add these just incase they become useful in future.
+	unknown1: number,
+	unused1: number,
+	unknown2: number,
+	unused2: number,
 }
 
-interface SunGlare2DEffectChunk extends Base2DEffectChunk {
-	entryType: 4,
+export interface SunGlare2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.SunGlare,
 }
 
 // Doesn't appear to be a type 5
 
-interface EnterExit2DEffectChunk extends Base2DEffectChunk {
-	entryType: 6,
+export interface EnterExit2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.EnterExit,
 
 	enterRotationAngle: number,
 	radiusX: number,
@@ -67,45 +138,62 @@ interface EnterExit2DEffectChunk extends Base2DEffectChunk {
 
 	interiorId: number,
 	flags: number, // ?
-	interiorName: number,
+	interiorName: string,
 
-	timeOn: string,
-	timeOff: string,
-	skyColor: string,
+	timeOn: number,
+	timeOff: number,
+	skyColor: number,
 
+	unknown: number,
 }
 
 // The documentation for this section isn't as clear
 // So I'm making some educated guesses.
-interface StreetSign2DEffectChunk extends Base2DEffectChunk {
-	entryType: 7,
+export interface StreetSign2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.StreetSign,
 
 	size: { width: number, height: number },
 	rotation: { x: number, y: number, z: number },
-	flags: number, // Needs enum
+	flags: number, // Uses bit masking :(
 	text: string[],
+
+	flagsDecoded: {
+		lines: number,
+		maxSymbols: number,
+		textColor: number,
+	}
 }
+
 
 // Not sure how to use this just yet.
 // Looks like it calls a method
-interface TriggerPoint2DEffectChunk extends Base2DEffectChunk {
-	entryType: 8,
+export interface TriggerPoint2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.TriggerPoint,
 
 	pointId: number,
 }
 
-interface CoverPoint2DEffectChunk extends Base2DEffectChunk {
-	entryType: 9,
+export interface CoverPoint2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.CoverPoint,
 
 	xDirection: number,
 	yDirection: number,
 	coverType: number, // No documentation.. :(
 }
 
-interface Escalator2DEffectChunk extends Base2DEffectChunk {
-	entryType: 10,
+export interface Escalator2DEffectEntry extends Base2DEffectEntry {
+	entryType: EntryType.Escalator,
 	bottomPosition: { x: number, y: number, z: number },
 	topPosition: { x: number, y: number, z: number },
 	endPosition: { x: number, y:number, z: number },
 	direction: number,
+}
+
+type EffectEntry = Light2DEffectEntry | ExtendedLight2DEffectEntry | Particle2DEffectEntry | PedAttractor2DEffectEntry | SunGlare2DEffectEntry | EnterExit2DEffectEntry | StreetSign2DEffectEntry | TriggerPoint2DEffectEntry | CoverPoint2DEffectEntry | Escalator2DEffectEntry | Base2DEffectEntry;
+export { EffectEntry }
+
+
+export default interface Base2DEffectChunk {
+	entryCount: number,
+	entries: EffectEntry[]
 }

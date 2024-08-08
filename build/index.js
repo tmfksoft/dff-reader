@@ -8,6 +8,7 @@ const PointerBuffer_1 = __importDefault(require("./PointerBuffer"));
 const ChunkTypes_1 = __importDefault(require("./enums/ChunkTypes"));
 const GeometryFormat_1 = __importDefault(require("./enums/GeometryFormat"));
 const AtomicFlags_1 = __importDefault(require("./enums/AtomicFlags"));
+const _2DEffectChunk_1 = require("./interfaces/chunks/2DEffectChunk");
 class DFFReader {
     constructor(data) {
         this.data = data;
@@ -501,6 +502,259 @@ class DFFReader {
                 chunk.parsed = Object.assign(Object.assign({}, chunk.parsed), { flags,
                     keyFrameSize, nodes: keyFrames });
             }
+        }
+        else if (chunk.type === ChunkTypes_1.default.Effect_2D) {
+            const content = new PointerBuffer_1.default(chunk.data);
+            const entryCount = content.readDWORD();
+            const entries = [];
+            for (let i = 0; i < entryCount; i++) {
+                const posX = content.readFloat();
+                const posY = content.readFloat();
+                const posZ = content.readFloat();
+                const entryType = content.readUint32(); // Type?
+                const dataSize = content.readDWORD(); // Data size
+                const sectionData = new PointerBuffer_1.default(content.readSection(dataSize));
+                const entry = {
+                    position: {
+                        x: posX,
+                        y: posY,
+                        z: posZ,
+                    },
+                    entryType
+                };
+                if (entryType === _2DEffectChunk_1.EntryType.Light) {
+                    const lightEntry = entry;
+                    const colorR = sectionData.readUint8();
+                    const colorG = sectionData.readUint8();
+                    const colorB = sectionData.readUint8();
+                    const colorA = sectionData.readUint8();
+                    const coronaFarClip = sectionData.readFloat();
+                    const pointLightRange = sectionData.readFloat();
+                    const coronaSize = sectionData.readFloat();
+                    const shadowSize = sectionData.readFloat();
+                    const coronaShowMode = sectionData.readUint8();
+                    const coronaEnableReflection = sectionData.readUint8();
+                    const coronaFlareType = sectionData.readUint8();
+                    const shadowColorMultiplier = sectionData.readUint8();
+                    const flags1 = sectionData.readUint8();
+                    const coronaTexName = sectionData.readString(24);
+                    const shadowTexName = sectionData.readString(24);
+                    const shadowZDistance = sectionData.readUint8();
+                    const flags2 = sectionData.readUint8();
+                    // Populate the entry
+                    lightEntry.color = {
+                        r: colorR,
+                        g: colorG,
+                        b: colorB,
+                        a: colorA,
+                    };
+                    lightEntry.coronaFarClip = coronaFarClip;
+                    lightEntry.pointLightRange = pointLightRange;
+                    lightEntry.coronaSize = coronaSize;
+                    lightEntry.shadowSize = shadowSize;
+                    lightEntry.coronaShowMode = coronaShowMode;
+                    lightEntry.coronaEnableReflection = coronaEnableReflection;
+                    lightEntry.coronaFlareType = coronaFlareType;
+                    lightEntry.shadowColorMultiplier = shadowColorMultiplier;
+                    lightEntry.flags1 = flags1;
+                    lightEntry.coronaTexName = coronaTexName.trim();
+                    lightEntry.shadowTexName = shadowTexName.trim();
+                    lightEntry.shadowZDistance = shadowZDistance;
+                    lightEntry.flags2 = flags2;
+                    if (dataSize === 80) {
+                        const extendedLightEntry = entry;
+                        const lookDirectionX = sectionData.readUint8();
+                        const lookDirectionY = sectionData.readUint8();
+                        const lookDirectionZ = sectionData.readUint8();
+                        extendedLightEntry.lookDirection = {
+                            x: lookDirectionX,
+                            y: lookDirectionY,
+                            z: lookDirectionZ,
+                        };
+                    }
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.ParticleEffect) {
+                    const particleEffectEntry = entry;
+                    const particleName = sectionData.readString(24);
+                    // Not sure where this is used right now.
+                    // It likely needs trimming properly.
+                    particleEffectEntry.particleName = particleName.trim();
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.PedAttractor) {
+                    const pedEntry = entry;
+                    const attractorType = sectionData.readDWORD();
+                    const queueDirX = sectionData.readFloat();
+                    const queueDirY = sectionData.readFloat();
+                    const queueDirZ = sectionData.readFloat();
+                    const useDirX = sectionData.readFloat();
+                    const useDirY = sectionData.readFloat();
+                    const useDirZ = sectionData.readFloat();
+                    const forwardDirX = sectionData.readFloat();
+                    const forwardDirY = sectionData.readFloat();
+                    const forwardDirZ = sectionData.readFloat();
+                    const externalScriptName = sectionData.readString(8);
+                    const pedExistingProbability = sectionData.readDWORD();
+                    const unknown1 = sectionData.readUint8();
+                    const unused1 = sectionData.readUint8();
+                    const unknown2 = sectionData.readUint8();
+                    const unused2 = sectionData.readUint8();
+                    pedEntry.attractorType = attractorType;
+                    pedEntry.queueDir = {
+                        x: queueDirX,
+                        y: queueDirY,
+                        z: queueDirZ,
+                    };
+                    pedEntry.useDir = {
+                        x: useDirX,
+                        y: useDirY,
+                        z: useDirZ,
+                    };
+                    pedEntry.forwardDir = {
+                        x: forwardDirX,
+                        y: forwardDirY,
+                        z: forwardDirZ,
+                    };
+                    pedEntry.externalScriptName = externalScriptName;
+                    pedEntry.pedExistingProbability = pedExistingProbability;
+                    // Wonder if these are used by a script somehow
+                    pedEntry.unknown1 = unknown1;
+                    pedEntry.unused1 = unused1;
+                    pedEntry.unknown2 = unknown2;
+                    pedEntry.unused2 = unused2;
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.SunGlare) {
+                    // No specific code
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.EnterExit) {
+                    const enterExitEntry = entry;
+                    const enterRotationAngle = sectionData.readFloat();
+                    const radiusX = sectionData.readFloat();
+                    const radiusY = sectionData.readFloat();
+                    const exitPositionX = sectionData.readFloat();
+                    const exitPositionY = sectionData.readFloat();
+                    const exitPositionZ = sectionData.readFloat();
+                    const exitRotationAngle = sectionData.readFloat();
+                    const interiorId = sectionData.readInt16();
+                    const flags = sectionData.readInt16();
+                    // Assuming GXT String?
+                    const interiorName = sectionData.readString(8);
+                    const timeOn = sectionData.readUint8();
+                    const timeOff = sectionData.readUint8();
+                    const skyColor = sectionData.readUint8();
+                    const unknown = sectionData.readUint8();
+                    // Populate the entry
+                    enterExitEntry.enterRotationAngle = enterRotationAngle;
+                    enterExitEntry.radiusX = radiusX;
+                    enterExitEntry.radiusY = radiusY;
+                    enterExitEntry.exitPosition = {
+                        x: exitPositionX,
+                        y: exitPositionY,
+                        z: exitPositionZ,
+                    };
+                    enterExitEntry.exitRotationAngle = exitRotationAngle;
+                    enterExitEntry.interiorId = interiorId;
+                    enterExitEntry.flags = flags;
+                    enterExitEntry.interiorName = interiorName;
+                    enterExitEntry.timeOn = timeOn;
+                    enterExitEntry.timeOff = timeOff;
+                    enterExitEntry.skyColor = skyColor;
+                    enterExitEntry.unknown = unknown;
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.StreetSign) {
+                    // Suddenly documentation change!
+                    // This section of the wiki isn't as obvious.
+                    // I'm also not 100% sure where this is used.
+                    // I haven't found it on a few street signs yet
+                    const streetSignEntry = entry;
+                    // Hopefully there's no massive bugs here..
+                    console.warn("Found 2D Effect Street Sign, The data may not be reliably parsed.");
+                    const sizeWidth = sectionData.readUint32();
+                    const sizeHeight = sectionData.readUint32();
+                    const rotationX = sectionData.readUint32();
+                    const rotationY = sectionData.readUint32();
+                    const rotationZ = sectionData.readUint32();
+                    const flags = sectionData.readUint32();
+                    const line1 = sectionData.readString(16);
+                    const line2 = sectionData.readString(16);
+                    const line3 = sectionData.readString(16);
+                    const line4 = sectionData.readString(16);
+                    // I've chosen to not parse flags just yet until
+                    // I understand more.
+                    // Populate the entry
+                    streetSignEntry.size = {
+                        width: sizeWidth,
+                        height: sizeHeight,
+                    };
+                    streetSignEntry.rotation = {
+                        x: rotationX,
+                        y: rotationY,
+                        z: rotationZ,
+                    };
+                    streetSignEntry.flags = flags;
+                    streetSignEntry.text = [
+                        line1, line2, line3, line4,
+                    ];
+                    // I'll just define some defaults.
+                    streetSignEntry.flagsDecoded = {
+                        lines: 4,
+                        maxSymbols: 16,
+                        textColor: 0xFFFFFFFF,
+                    };
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.TriggerPoint) {
+                    const triggerPointEntry = entry;
+                    const pointId = sectionData.readDWORD();
+                    triggerPointEntry.pointId = pointId;
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.CoverPoint) {
+                    const coverPointEntry = entry;
+                    const xDirection = sectionData.readFloat();
+                    const yDirection = sectionData.readFloat();
+                    const coverType = sectionData.readDWORD();
+                    coverPointEntry.xDirection = xDirection;
+                    coverPointEntry.yDirection = yDirection;
+                    coverPointEntry.coverType = coverType;
+                }
+                else if (entryType === _2DEffectChunk_1.EntryType.Escalator) {
+                    const escalatorPointEntry = entry;
+                    const bottomX = sectionData.readFloat();
+                    const bottomY = sectionData.readFloat();
+                    const bottomZ = sectionData.readFloat();
+                    const topX = sectionData.readFloat();
+                    const topY = sectionData.readFloat();
+                    const topZ = sectionData.readFloat();
+                    const endX = sectionData.readFloat();
+                    const endY = sectionData.readFloat();
+                    const endZ = sectionData.readFloat();
+                    const direction = sectionData.readDWORD();
+                    // Populate the entry
+                    escalatorPointEntry.bottomPosition = {
+                        x: bottomX,
+                        y: bottomY,
+                        z: bottomZ,
+                    };
+                    escalatorPointEntry.topPosition = {
+                        x: topX,
+                        y: topY,
+                        z: topZ,
+                    };
+                    escalatorPointEntry.endPosition = {
+                        x: endX,
+                        y: endY,
+                        z: endZ,
+                    };
+                    escalatorPointEntry.direction = direction;
+                }
+                else {
+                    console.warn("Unrecognised 2D Effect Entry %i", entryType);
+                }
+                entries.push(entry);
+            }
+            const effect = {
+                entryCount,
+                entries
+            };
+            chunk.parsed = effect;
         }
         return chunk;
     }
