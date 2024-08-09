@@ -13,6 +13,8 @@ async function start() {
 	// xenonsign2_SFSe
 	// BS_building_SFS - Burger shot?
 
+	// mafcasSigns1 - Bug loading UV animations
+
 	const modelName = "mlamppost";
 
 	const bansheeFile = path.join(tempDir, modelName + ".dff");

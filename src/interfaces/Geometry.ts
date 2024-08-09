@@ -1,5 +1,6 @@
 import Base2DEffectChunk from "./chunks/2DEffectChunk";
 import Material from "./Material";
+import RGBA from "./RGBA";
 import Triangle from "./Triangle";
 
 export default interface Geometry {
@@ -21,7 +22,8 @@ export default interface Geometry {
 	normals: { x: number, y: number, z:number }[],
 
 	// Vertex RGBA 0-255 range
-	vertexColours: { r: number, g: number, b: number, a: number }[],
+	vertexColours: RGBA[],
+	nightVertexColours?: RGBA[],
 
 	uvs: { u: number, v: number }[][],
 
