@@ -23,6 +23,7 @@ function start() {
         // Bug with loading animated models ahead :(
         // xenonsign2_SFSe
         // BS_building_SFS - Burger shot?
+        // mafcasSigns1 - Bug loading UV animations
         const modelName = "mlamppost";
         const bansheeFile = path_1.default.join(tempDir, modelName + ".dff");
         const bansheeData = fs_1.default.readFileSync(bansheeFile);

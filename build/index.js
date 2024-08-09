@@ -535,7 +535,7 @@ class DFFReader {
                     const coronaShowMode = sectionData.readUint8();
                     const coronaEnableReflection = sectionData.readUint8();
                     const coronaFlareType = sectionData.readUint8();
-                    const shadowColorMultiplier = sectionData.readUint8();
+                    const shadowColorMultiplier = sectionData.readSection(1)[0];
                     const flags1 = sectionData.readUint8();
                     const coronaTexName = sectionData.readString(24);
                     const shadowTexName = sectionData.readString(24);
@@ -756,6 +756,27 @@ class DFFReader {
             };
             chunk.parsed = effect;
         }
+        else if (chunk.type === ChunkTypes_1.default.Extra_Vert_Colour) {
+            const content = new PointerBuffer_1.default(chunk.data);
+            const magicNumber = content.readDWORD();
+            const vertexColours = [];
+            const colourCount = (chunk.size - 4) / 4;
+            if (magicNumber !== 0) {
+                for (let i = 0; i < colourCount; i++) {
+                    const red = content.readUint8();
+                    const green = content.readUint8();
+                    const blue = content.readUint8();
+                    const alpha = content.readUint8();
+                    vertexColours.push({
+                        r: red,
+                        g: green,
+                        b: blue,
+                        a: alpha
+                    });
+                }
+                chunk.parsed = vertexColours;
+            }
+        }
         return chunk;
     }
     stripData(chunk) {
@@ -853,6 +874,13 @@ class DFFReader {
                 const parentIndex = frameListData && frameListData.parentIndex || defaultParentIndex;
                 const matrixFlags = frameListData && frameListData.matrixFlags || defaultMatrixFlags;
                 const twoFX = this.searchChunk(targetGeometry, ChunkTypes_1.default.Effect_2D);
+                const vertColours = this.searchChunk(targetGeometry, ChunkTypes_1.default.Extra_Vert_Colour);
+                let extraVertColours;
+                if (vertColours.length > 0) {
+                    if (vertColours[0].parsed) {
+                        extraVertColours = vertColours[0].parsed;
+                    }
+                }
                 let effect;
                 if (twoFX.length > 0) {
                     if (twoFX[0].parsed) {
@@ -865,7 +893,7 @@ class DFFReader {
                             return Object.assign(Object.assign({}, m.parsed), { texture: textures.map(m => m.parsed)[0] });
                         }
                         return Object.assign({}, m.parsed);
-                    }), effect,
+                    }), nightVertexColours: extraVertColours, effect,
                     position,
                     rotationMatrix,
                     parentIndex,
