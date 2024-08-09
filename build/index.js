@@ -852,13 +852,21 @@ class DFFReader {
                 const rotationMatrix = frameListData && frameListData.rotationMatrix || defaultRotationMatrix;
                 const parentIndex = frameListData && frameListData.parentIndex || defaultParentIndex;
                 const matrixFlags = frameListData && frameListData.matrixFlags || defaultMatrixFlags;
+                const twoFX = this.searchChunk(targetGeometry, ChunkTypes_1.default.Effect_2D);
+                let effect;
+                if (twoFX.length > 0) {
+                    if (twoFX[0].parsed) {
+                        effect = twoFX[0].parsed;
+                    }
+                }
                 geometryList.push(Object.assign(Object.assign({ name: geoName }, targetGeometry.parsed), { materials: materials.filter(m => (m.parsed)).map(m => {
                         const textures = this.searchChunk(m, ChunkTypes_1.default.Texture);
                         if (textures.length > 0) {
                             return Object.assign(Object.assign({}, m.parsed), { texture: textures.map(m => m.parsed)[0] });
                         }
                         return Object.assign({}, m.parsed);
-                    }), position,
+                    }), effect,
+                    position,
                     rotationMatrix,
                     parentIndex,
                     matrixFlags, animData: hAnim.length > 0 && hAnim[0].parsed || undefined }));

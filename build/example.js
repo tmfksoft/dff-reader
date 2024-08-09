@@ -23,7 +23,7 @@ function start() {
         // Bug with loading animated models ahead :(
         // xenonsign2_SFSe
         // BS_building_SFS - Burger shot?
-        const modelName = "cxrf_frway1sig";
+        const modelName = "mlamppost";
         const bansheeFile = path_1.default.join(tempDir, modelName + ".dff");
         const bansheeData = fs_1.default.readFileSync(bansheeFile);
         const dff = new _1.default(bansheeData);
