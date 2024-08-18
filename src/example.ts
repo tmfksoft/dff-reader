@@ -17,7 +17,7 @@ async function start() {
 
 	// s_bit_08.dff has StreetSign
 
-	const modelName = "mlamppost";
+	const modelName = "s_bit_08";
 
 	const bansheeFile = path.join(tempDir, modelName + ".dff");
 	const bansheeData = fs.readFileSync(bansheeFile);

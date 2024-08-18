@@ -827,15 +827,36 @@ class DFFReader {
 					const rotationY = sectionData.readFloat();
 					const rotationZ = sectionData.readFloat();
 
-					const flags = sectionData.readUint32();
+					const flags = sectionData.readUint16();
+					console.log(flags.toString(2));
+
+					const lineMask = 0b00000011;
+					const lineCountFlag = (flags & lineMask) >> 0;
+
+					const symbolMask = 0b00001100;
+					const symbolCountFlag = (flags & symbolMask) >> 2;
+
+					const textColorMask = 0b00110000;
+					const textColorFlag = (flags & textColorMask) >> 4;
+
+
+					const lineCounts = [
+						4, 1, 2, 3
+					];
+					const symbolCounts = [
+						16, 2, 4, 8,
+					];
+					const textColors = [
+						0xFFFFFF, // White
+						0x000000, // Black
+						0x808080, // Grey
+						0xFF0000, // Red
+					];
 
 					const line1 = sectionData.readString(16);
 					const line2 = sectionData.readString(16);
 					const line3 = sectionData.readString(16);
 					const line4 = sectionData.readString(16);
-
-					// I've chosen to not parse flags just yet until
-					// I understand more.
 
 					// Populate the entry
 					streetSignEntry.size = {
@@ -854,10 +875,11 @@ class DFFReader {
 					
 					// I'll just define some defaults.
 					streetSignEntry.flagsDecoded = {
-						lines: 4,
-						maxSymbols: 16,
-						textColor: 0xFFFFFFFF,
+						lines: lineCounts[lineCountFlag],
+						maxSymbols: symbolCounts[symbolCountFlag],
+						textColor: textColors[textColorFlag],
 					};
+
 
 				} else if (entryType === EntryType.TriggerPoint) {
 					const triggerPointEntry = entry as TriggerPoint2DEffectEntry;
