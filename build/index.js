@@ -667,12 +667,13 @@ class DFFReader {
                     // I haven't found it on a few street signs yet
                     const streetSignEntry = entry;
                     // Hopefully there's no massive bugs here..
+                    // OH GOD THEYRE MASSIVE BUGS.
                     console.warn("Found 2D Effect Street Sign, The data may not be reliably parsed.");
-                    const sizeWidth = sectionData.readUint32();
-                    const sizeHeight = sectionData.readUint32();
-                    const rotationX = sectionData.readUint32();
-                    const rotationY = sectionData.readUint32();
-                    const rotationZ = sectionData.readUint32();
+                    const sizeWidth = sectionData.readFloat();
+                    const sizeHeight = sectionData.readFloat();
+                    const rotationX = sectionData.readFloat();
+                    const rotationY = sectionData.readFloat();
+                    const rotationZ = sectionData.readFloat();
                     const flags = sectionData.readUint32();
                     const line1 = sectionData.readString(16);
                     const line2 = sectionData.readString(16);

@@ -15,6 +15,8 @@ async function start() {
 
 	// mafcasSigns1 - Bug loading UV animations
 
+	// s_bit_08.dff has StreetSign
+
 	const modelName = "mlamppost";
 
 	const bansheeFile = path.join(tempDir, modelName + ".dff");
