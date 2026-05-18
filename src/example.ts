@@ -20,7 +20,7 @@ async function start() {
 	const modelName = "s_bit_08";
 
 	const bansheeFile = path.join(tempDir, modelName + ".dff");
-	const bansheeData = fs.readFileSync(bansheeFile);
+	const bansheeData = new Uint8Array(fs.readFileSync(bansheeFile));
 
 	const dff = new DFFReader(bansheeData);
 

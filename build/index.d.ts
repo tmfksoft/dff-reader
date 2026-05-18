@@ -1,14 +1,13 @@
-/// <reference types="node" />
 import PointerBuffer from "./PointerBuffer";
 import ChunkTypes from "./enums/ChunkTypes";
 import RawChunk from "./interfaces/RawChunk";
 import Geometry from "./interfaces/Geometry";
 import GeometryNode from "./interfaces/GeometryNode";
 declare class DFFReader {
-    protected data: Buffer;
+    protected data: Uint8Array;
     rawData: PointerBuffer;
     parsed: RawChunk;
-    constructor(data: Buffer);
+    constructor(data: Uint8Array);
     parseFile(): RawChunk;
     parseChunk(buf: PointerBuffer): RawChunk;
     stripData(chunk: RawChunk): any;
@@ -29,8 +28,8 @@ declare class DFFReader {
      * @param geometry
      */
     toOBJ(geometry: Geometry): {
-        obj: Buffer;
-        mtl: Buffer;
+        obj: Uint8Array;
+        mtl: Uint8Array;
     };
     getNode(): GeometryNode;
 }

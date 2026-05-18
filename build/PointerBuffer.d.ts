@@ -1,12 +1,12 @@
-/// <reference types="node" />
 export default class PointerBuffer {
-    protected data: Buffer;
+    protected data: Uint8Array;
     pointer: number;
     pointerHistory: number[];
     size: number;
-    get rawData(): Buffer;
+    private view;
+    get rawData(): Uint8Array<ArrayBufferLike>;
     get hasMore(): boolean;
-    constructor(data: Buffer);
+    constructor(data: Uint8Array);
     pointerCheck(dataSize: number): void;
     readDWORD(): number;
     readUint32(): number;
@@ -14,9 +14,9 @@ export default class PointerBuffer {
     readInt16(): number;
     readFloat(): number;
     readUint8(): number;
-    readSection(length: number): Buffer;
+    readSection(length: number): Uint8Array<ArrayBufferLike>;
     readString(length: number): string;
-    readChunks(length: number): Buffer[];
+    readChunks(length: number): Uint8Array<ArrayBufferLike>[];
     forward(length: number): void;
     backward(length: number): void;
     rewind(): void;

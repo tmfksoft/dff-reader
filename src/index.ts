@@ -1,5 +1,3 @@
-import path from "path";
-import fs from 'fs';
 import Util from "./Util";
 import PointerBuffer from "./PointerBuffer";
 import ChunkTypes from "./enums/ChunkTypes";
@@ -22,7 +20,7 @@ class DFFReader {
 	public rawData: PointerBuffer;
 	public parsed: RawChunk;
 
-	constructor(protected data: Buffer) {
+	constructor(protected data: Uint8Array) {
 		this.rawData = new PointerBuffer(data);
 		this.parsed = this.parseFile();
 
@@ -36,9 +34,10 @@ class DFFReader {
 
 		const sectionHeader = buf.readSection(12);
 
-		const sectionType = sectionHeader.readUint32LE(0);
-		const sectionSize = sectionHeader.readUint32LE(4);
-		const sectionLibrary = sectionHeader.readUint32LE(8);
+		const headerView = new DataView(sectionHeader.buffer, sectionHeader.byteOffset, sectionHeader.byteLength);
+		const sectionType = headerView.getUint32(0, true);
+		const sectionSize = headerView.getUint32(4, true);
+		const sectionLibrary = headerView.getUint32(8, true);
 		const sectionContent = buf.readSection(sectionSize);
 
 		const chunk: RawChunk = {
@@ -208,7 +207,7 @@ class DFFReader {
 			}
 		} else if (chunk.type === ChunkTypes.Breakable) {
 			// Breakable
-			const magicNumber = sectionContent.readUint32LE();
+			const magicNumber = new DataView(sectionContent.buffer, sectionContent.byteOffset, sectionContent.byteLength).getUint32(0, true);
 			chunk.parsed = {
 				magicNumber
 			};
@@ -466,10 +465,9 @@ class DFFReader {
 			}
 		} else if (chunk.type === ChunkTypes.Frame) {
 			// Frame
-
-			// Lazy way to do it.
+			const nullIndex = sectionContent.indexOf(0);
 			chunk.parsed = {
-				name: sectionContent.toString(),
+				name: new TextDecoder().decode(nullIndex >= 0 ? sectionContent.subarray(0, nullIndex) : sectionContent),
 			};
 		} else if (chunk.type === ChunkTypes.Texture) {
 			// Texture
@@ -1143,7 +1141,7 @@ class DFFReader {
 	 * Converts the supplied Geometry to a OBJ and its accompanying Material.
 	 * @param geometry 
 	 */
-	toOBJ(geometry: Geometry): { obj: Buffer, mtl: Buffer } {
+	toOBJ(geometry: Geometry): { obj: Uint8Array, mtl: Uint8Array } {
 		let objLines: string[] = [];
 		let mtlLines: string[] = [];
 
@@ -1242,9 +1240,10 @@ class DFFReader {
 			mtlLines.push(`\tKa ${ambientR} ${ambientG} ${ambientB}`);
 		}
 
+		const encoder = new TextEncoder();
 		return {
-			obj: Buffer.from(objLines.join('\r\n')),
-			mtl: Buffer.from(mtlLines.join('\r\n')),
+			obj: encoder.encode(objLines.join('\r\n')),
+			mtl: encoder.encode(mtlLines.join('\r\n')),
 		};
 	}
 

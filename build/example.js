@@ -27,7 +27,7 @@ function start() {
         // s_bit_08.dff has StreetSign
         const modelName = "s_bit_08";
         const bansheeFile = path_1.default.join(tempDir, modelName + ".dff");
-        const bansheeData = fs_1.default.readFileSync(bansheeFile);
+        const bansheeData = new Uint8Array(fs_1.default.readFileSync(bansheeFile));
         const dff = new _1.default(bansheeData);
         fs_1.default.writeFileSync(path_1.default.join(tempDir, modelName + ".json"), JSON.stringify(dff.stripData(dff.parsed), null, '\t'));
         //fs.writeFileSync(path.join(tempDir, modelName + ".json"), JSON.stringify(dff.parsed, null, '\t'));

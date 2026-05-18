@@ -20,9 +20,10 @@ class DFFReader {
     }
     parseChunk(buf) {
         const sectionHeader = buf.readSection(12);
-        const sectionType = sectionHeader.readUint32LE(0);
-        const sectionSize = sectionHeader.readUint32LE(4);
-        const sectionLibrary = sectionHeader.readUint32LE(8);
+        const headerView = new DataView(sectionHeader.buffer, sectionHeader.byteOffset, sectionHeader.byteLength);
+        const sectionType = headerView.getUint32(0, true);
+        const sectionSize = headerView.getUint32(4, true);
+        const sectionLibrary = headerView.getUint32(8, true);
         const sectionContent = buf.readSection(sectionSize);
         const chunk = {
             type: sectionType,
@@ -37,14 +38,14 @@ class DFFReader {
         };
         const childrenChunks = [];
         const containerTypes = [
-            ChunkTypes_1.default.Extension,
-            ChunkTypes_1.default.Material,
-            ChunkTypes_1.default.Material_List,
-            ChunkTypes_1.default.Clump,
-            ChunkTypes_1.default.Frame_List,
-            ChunkTypes_1.default.Geometry_List,
-            ChunkTypes_1.default.Geometry,
-            ChunkTypes_1.default.Atomic,
+            ChunkTypes_1.default.Extension, // Extension
+            ChunkTypes_1.default.Material, // Material
+            ChunkTypes_1.default.Material_List, // Material List
+            ChunkTypes_1.default.Clump, // Clump
+            ChunkTypes_1.default.Frame_List, // Frame List
+            ChunkTypes_1.default.Geometry_List, // Geometry List
+            ChunkTypes_1.default.Geometry, // Geometry
+            ChunkTypes_1.default.Atomic, // Atomic
             ChunkTypes_1.default.Texture, // Texture
         ];
         if (containerTypes.includes(chunk.type)) {
@@ -171,7 +172,7 @@ class DFFReader {
         }
         else if (chunk.type === ChunkTypes_1.default.Breakable) {
             // Breakable
-            const magicNumber = sectionContent.readUint32LE();
+            const magicNumber = new DataView(sectionContent.buffer, sectionContent.byteOffset, sectionContent.byteLength).getUint32(0, true);
             chunk.parsed = {
                 magicNumber
             };
@@ -378,9 +379,9 @@ class DFFReader {
         }
         else if (chunk.type === ChunkTypes_1.default.Frame) {
             // Frame
-            // Lazy way to do it.
+            const nullIndex = sectionContent.indexOf(0);
             chunk.parsed = {
-                name: sectionContent.toString(),
+                name: new TextDecoder().decode(nullIndex >= 0 ? sectionContent.subarray(0, nullIndex) : sectionContent),
             };
         }
         else if (chunk.type === ChunkTypes_1.default.Texture) {
@@ -689,9 +690,9 @@ class DFFReader {
                         16, 2, 4, 8,
                     ];
                     const textColors = [
-                        0xFFFFFF,
-                        0x000000,
-                        0x808080,
+                        0xFFFFFF, // White
+                        0x000000, // Black
+                        0x808080, // Grey
                         0xFF0000, // Red
                     ];
                     const line1 = sectionData.readString(16);
@@ -1009,9 +1010,10 @@ class DFFReader {
             const ambientB = material.color.b / 255;
             mtlLines.push(`\tKa ${ambientR} ${ambientG} ${ambientB}`);
         }
+        const encoder = new TextEncoder();
         return {
-            obj: Buffer.from(objLines.join('\r\n')),
-            mtl: Buffer.from(mtlLines.join('\r\n')),
+            obj: encoder.encode(objLines.join('\r\n')),
+            mtl: encoder.encode(mtlLines.join('\r\n')),
         };
     }
     getNode() {

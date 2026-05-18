@@ -10,7 +10,7 @@ export declare enum EntryType {
     Light = 0,
     ParticleEffect = 1,
     PedAttractor = 3,
-    SunGlare = 4,
+    SunGlare = 4,// No idea where or how this is used
     EnterExit = 6,
     StreetSign = 7,
     TriggerPoint = 8,
@@ -41,16 +41,16 @@ export declare enum LightCoronaShowMode {
     DEFAULT = 0,
     RANDOM_FLASHING = 1,
     RANDOM_FLASHING_ALWAYS_AT_WET_WEATHER = 2,
-    LIGHTS_ANIM_SPEED_4X = 3,
-    LIGHTS_ANIM_SPEED_2X = 4,
+    LIGHTS_ANIM_SPEED_4X = 3,// Used on model 10 green bottles. Lights alternately switched on-off.
+    LIGHTS_ANIM_SPEED_2X = 4,// Used on skyscrapers in San Fierro
     LIGHTS_ANIM_SPEED_1x = 5,
-    WARNLIGHT = 6,
+    WARNLIGHT = 6,// Used on model nt_roadblockci
     TRAFFICLIGHT = 7,
     TRAINCROSSLIGHT = 8,
-    UNKNOWN = 9,
-    AT_RAIN_ONLY = 10,
-    TIME_5_5 = 11,
-    TIME_6_4_12 = 12,
+    UNKNOWN = 9,// Doesn't work (light is always disabled)
+    AT_RAIN_ONLY = 10,// Enables only in rainy weather
+    TIME_5_5 = 11,// 5s on, 5s off
+    TIME_6_4_12 = 12,// 6s on, 4s off
     TIME_6_4_13 = 13
 }
 export interface Light2DEffectEntry extends Base2DEffectEntry {

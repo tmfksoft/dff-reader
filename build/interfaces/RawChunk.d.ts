@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export default interface RawChunk<T = any> {
     type: number;
     typeName: string;
@@ -10,5 +9,5 @@ export default interface RawChunk<T = any> {
     };
     children?: RawChunk[];
     parsed?: T;
-    data: Buffer;
+    data: Uint8Array;
 }

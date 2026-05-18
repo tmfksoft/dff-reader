@@ -16,7 +16,7 @@ var EntryType;
     EntryType[EntryType["TriggerPoint"] = 8] = "TriggerPoint";
     EntryType[EntryType["CoverPoint"] = 9] = "CoverPoint";
     EntryType[EntryType["Escalator"] = 10] = "Escalator";
-})(EntryType = exports.EntryType || (exports.EntryType = {}));
+})(EntryType || (exports.EntryType = EntryType = {}));
 /**
  * 2D Light Entry
  */
@@ -30,7 +30,7 @@ var LightFlags1;
     LightFlags1[LightFlags1["AT_DAY"] = 32] = "AT_DAY";
     LightFlags1[LightFlags1["AT_NIGHT"] = 64] = "AT_NIGHT";
     LightFlags1[LightFlags1["BLINKING1"] = 128] = "BLINKING1";
-})(LightFlags1 = exports.LightFlags1 || (exports.LightFlags1 = {}));
+})(LightFlags1 || (exports.LightFlags1 = LightFlags1 = {}));
 var LightFlags2;
 (function (LightFlags2) {
     LightFlags2[LightFlags2["CORONA_ONLY_FROM_BELOW"] = 1] = "CORONA_ONLY_FROM_BELOW";
@@ -38,7 +38,7 @@ var LightFlags2;
     LightFlags2[LightFlags2["UPDATE_HEIGHT_ABOVE_GROUND"] = 4] = "UPDATE_HEIGHT_ABOVE_GROUND";
     LightFlags2[LightFlags2["CHECK_DIRECTION"] = 8] = "CHECK_DIRECTION";
     LightFlags2[LightFlags2["BLINKING3"] = 16] = "BLINKING3";
-})(LightFlags2 = exports.LightFlags2 || (exports.LightFlags2 = {}));
+})(LightFlags2 || (exports.LightFlags2 = LightFlags2 = {}));
 var LightCoronaShowMode;
 (function (LightCoronaShowMode) {
     LightCoronaShowMode[LightCoronaShowMode["DEFAULT"] = 0] = "DEFAULT";
@@ -55,7 +55,7 @@ var LightCoronaShowMode;
     LightCoronaShowMode[LightCoronaShowMode["TIME_5_5"] = 11] = "TIME_5_5";
     LightCoronaShowMode[LightCoronaShowMode["TIME_6_4_12"] = 12] = "TIME_6_4_12";
     LightCoronaShowMode[LightCoronaShowMode["TIME_6_4_13"] = 13] = "TIME_6_4_13";
-})(LightCoronaShowMode = exports.LightCoronaShowMode || (exports.LightCoronaShowMode = {}));
+})(LightCoronaShowMode || (exports.LightCoronaShowMode = LightCoronaShowMode = {}));
 var PedAttractorType;
 (function (PedAttractorType) {
     PedAttractorType[PedAttractorType["PED_ATM_ATTRACTOR"] = 0] = "PED_ATM_ATTRACTOR";
@@ -68,5 +68,5 @@ var PedAttractorType;
     PedAttractorType[PedAttractorType["PED_SCRIPTED_ATTRACTOR"] = 7] = "PED_SCRIPTED_ATTRACTOR";
     PedAttractorType[PedAttractorType["PED_PARK_ATTRACTOR"] = 8] = "PED_PARK_ATTRACTOR";
     PedAttractorType[PedAttractorType["PED_STEP_ATTRACTOR"] = 9] = "PED_STEP_ATTRACTOR";
-})(PedAttractorType = exports.PedAttractorType || (exports.PedAttractorType = {}));
+})(PedAttractorType || (exports.PedAttractorType = PedAttractorType = {}));
 //# sourceMappingURL=2DEffectChunk.js.map
