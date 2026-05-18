@@ -485,7 +485,7 @@ class DFFReader {
 					
 					const addressing = content.readUint8();
 					uAddressing = addressing & 0b00001111;
-					vAddressing = (addressing >> 4) && 0b00001111;
+					vAddressing = (addressing >> 4) & 0b00001111;
 
 					const mipLevelsByte = content.readUint8();
 					// idk how to do this right this second.
@@ -521,7 +521,7 @@ class DFFReader {
 			// String
 			let str = "";
 			const bytes = chunk.data;
-			for (let i=0; bytes.length; i++) {
+			for (let i=0; i < bytes.length; i++) {
 				const char = bytes[i];
 				if (char === 0x00) {
 					break;
@@ -554,7 +554,7 @@ class DFFReader {
 
 					const unused = content.readDWORD();
 
-					const isTextured = content.readUint32();
+					const isTextured = content.readUint32() !== 0;
 
 					let ambient = 0;
 					let specular = 0;
@@ -1082,10 +1082,10 @@ class DFFReader {
 
 			if (targetGeometry.parsed) {
 
-				const position = frameListData && frameListData.position || defaultPosition;
-				const rotationMatrix = frameListData && frameListData.rotationMatrix || defaultRotationMatrix;
-				const parentIndex = frameListData && frameListData.parentIndex || defaultParentIndex;
-				const matrixFlags = frameListData && frameListData.matrixFlags || defaultMatrixFlags;
+				const position = frameListData?.position ?? defaultPosition;
+				const rotationMatrix = frameListData?.rotationMatrix ?? defaultRotationMatrix;
+				const parentIndex = frameListData?.parentIndex ?? defaultParentIndex;
+				const matrixFlags = frameListData?.matrixFlags ?? defaultMatrixFlags;
 
 				const twoFX = this.searchChunk<Base2DEffectChunk>(targetGeometry, ChunkTypes.Effect_2D);
 				const vertColours = this.searchChunk<ExtraVertColour>(targetGeometry, ChunkTypes.Extra_Vert_Colour);
