@@ -5,3 +5,4 @@ enum LightTypes {
 	rpLIGHTSPOT = 0x81, // Spotlight
 	rpLIGHTSPOTSOFT = 0x81, // Spotlight, soft edges
 }
+export default LightTypes;

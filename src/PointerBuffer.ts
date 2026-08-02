@@ -104,8 +104,11 @@ export default class PointerBuffer {
 		this.pointerHistory.push(length);
 	}
 	backward(length: number) {
-		this.pointer = Math.abs(this.pointer - length);
-		this.pointerHistory.push(length);
+		if (length > this.pointer) {
+			throw new Error(`Attempting to move pointer before start of buffer! ${this.pointer} - ${length} < 0`);
+		}
+		this.pointer -= length;
+		this.pointerHistory.push(-length);
 	}
 
 	// Undoes the last read

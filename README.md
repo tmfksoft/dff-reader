@@ -192,7 +192,7 @@ fs.writeFileSync('model.mtl', mtl);
 
 The parser handles the following RenderWare chunks:
 
-- Clump, Frame List, Geometry List, Geometry, Atomic
+- Clump, Frame List, Geometry List, Geometry, Atomic, Light
 - Material List, Material, Texture, String
 - Bin Mesh PLG, HAnim PLG, Breakable
 - 2D Effect (lights, particles, ped attractors, enter/exit, street signs, trigger points, cover points, escalators)

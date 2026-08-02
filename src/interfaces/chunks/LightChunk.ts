@@ -1,4 +1,5 @@
 import LightFlags from "../../enums/LightFlags";
+import LightTypes from "../../enums/LightTypes";
 
 // https://gtamods.com/wiki/Light_(RW_Section)
 /**
