@@ -5,3 +5,4 @@ declare enum LightTypes {
     rpLIGHTSPOT = 129,// Spotlight
     rpLIGHTSPOTSOFT = 129
 }
+export default LightTypes;

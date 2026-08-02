@@ -9,6 +9,24 @@ const ChunkTypes_1 = __importDefault(require("./enums/ChunkTypes"));
 const GeometryFormat_1 = __importDefault(require("./enums/GeometryFormat"));
 const AtomicFlags_1 = __importDefault(require("./enums/AtomicFlags"));
 const _2DEffectChunk_1 = require("./interfaces/chunks/2DEffectChunk");
+// Chunk types whose content is itself a sequence of child chunks, rather than
+// a flat data payload. Hoisted out of parseChunk() - it's recursed into for
+// every chunk in the file, so rebuilding this on every call added up.
+const containerTypes = new Set([
+    ChunkTypes_1.default.Extension, // Extension
+    ChunkTypes_1.default.Material, // Material
+    ChunkTypes_1.default.Material_List, // Material List
+    ChunkTypes_1.default.Clump, // Clump
+    ChunkTypes_1.default.Frame_List, // Frame List
+    ChunkTypes_1.default.Geometry_List, // Geometry List
+    ChunkTypes_1.default.Geometry, // Geometry
+    ChunkTypes_1.default.Atomic, // Atomic
+    ChunkTypes_1.default.Texture, // Texture
+    ChunkTypes_1.default.Light, // Light
+]);
+// Shared across all string decodes in this module instead of constructing a
+// new TextDecoder per chunk (Frame names, texture names, alpha names, ...).
+const textDecoder = new TextDecoder();
 class DFFReader {
     constructor(data) {
         this.data = data;
@@ -16,14 +34,41 @@ class DFFReader {
         this.parsed = this.parseFile();
     }
     parseFile() {
-        return this.parseChunk(this.rawData);
+        // A .dff stream isn't always a single top-level chunk - some files
+        // (e.g. ones with UV animated textures) are preceded by a top-level
+        // UV Animation Dictionary (0x2B) chunk before the actual RwClump.
+        // Walk every top-level chunk and return the Clump; anything else
+        // found at the top level isn't currently exposed.
+        let maxLoop = 1000;
+        let clump;
+        // A stray handful of bytes after the last real chunk (padding,
+        // alignment, a trailing null) isn't enough to hold another chunk
+        // header (12 bytes) - treat that as end of file, not a chunk to parse.
+        // A file has exactly one Clump (the rest of this class assumes that
+        // too), so stop as soon as it's found instead of parsing - and
+        // immediately discarding - whatever else follows it.
+        while (!clump && this.rawData.hasBytes(12) && maxLoop > -1) {
+            const chunk = this.parseChunk(this.rawData);
+            if (chunk.type === ChunkTypes_1.default.Clump) {
+                clump = chunk;
+            }
+            maxLoop--;
+        }
+        if (maxLoop <= 0) {
+            console.warn("HIT MAX LOOP!");
+        }
+        if (!clump) {
+            throw new Error("No Clump chunk found in file");
+        }
+        return clump;
     }
     parseChunk(buf) {
-        const sectionHeader = buf.readSection(12);
-        const headerView = new DataView(sectionHeader.buffer, sectionHeader.byteOffset, sectionHeader.byteLength);
-        const sectionType = headerView.getUint32(0, true);
-        const sectionSize = headerView.getUint32(4, true);
-        const sectionLibrary = headerView.getUint32(8, true);
+        // buf's own DataView already covers this data - read the header
+        // straight off it instead of slicing out a section and wrapping a
+        // second DataView around it just to read 12 bytes.
+        const sectionType = buf.readUint32();
+        const sectionSize = buf.readUint32();
+        const sectionLibrary = buf.readUint32();
         const sectionContent = buf.readSection(sectionSize);
         const chunk = {
             type: sectionType,
@@ -37,28 +82,15 @@ class DFFReader {
             data: sectionContent,
         };
         const childrenChunks = [];
-        const containerTypes = [
-            ChunkTypes_1.default.Extension, // Extension
-            ChunkTypes_1.default.Material, // Material
-            ChunkTypes_1.default.Material_List, // Material List
-            ChunkTypes_1.default.Clump, // Clump
-            ChunkTypes_1.default.Frame_List, // Frame List
-            ChunkTypes_1.default.Geometry_List, // Geometry List
-            ChunkTypes_1.default.Geometry, // Geometry
-            ChunkTypes_1.default.Atomic, // Atomic
-            ChunkTypes_1.default.Texture, // Texture
-        ];
-        if (containerTypes.includes(chunk.type)) {
+        if (containerTypes.has(chunk.type)) {
             let maxLoop = 1000;
             const content = new PointerBuffer_1.default(sectionContent);
             while (content.hasMore && maxLoop > -1) {
-                const cType = content.readUint32();
-                const cSize = content.readUint32();
-                const cLibrary = content.readUint32();
-                // Rewind the buffer and read the whole section out of it.
-                content.backward(12);
-                const wholeChunk = content.readSection(12 + cSize);
-                childrenChunks.push(this.parseChunk(new PointerBuffer_1.default(wholeChunk)));
+                // parseChunk reads exactly one chunk's header + body (bounded by
+                // its own sectionSize) straight off `content` and advances its
+                // pointer past it, so there's no need to pre-slice/re-wrap each
+                // child into its own buffer here first.
+                childrenChunks.push(this.parseChunk(content));
                 maxLoop--;
             }
             if (maxLoop <= 0) {
@@ -75,9 +107,9 @@ class DFFReader {
                 const firstChild = childrenChunks[0];
                 if (firstChild.type === ChunkTypes_1.default.Struct) {
                     const content = new PointerBuffer_1.default(firstChild.data);
-                    const numAtomics = content.readDWORD();
-                    const numLights = content.readDWORD();
-                    const numCameras = content.readDWORD();
+                    const numAtomics = content.readUint32();
+                    const numLights = content.readUint32();
+                    const numCameras = content.readUint32();
                     chunk.parsed = {
                         numAtomics,
                         numLights,
@@ -92,7 +124,7 @@ class DFFReader {
                 const firstChild = childrenChunks[0];
                 if (firstChild.type === ChunkTypes_1.default.Struct) {
                     const content = new PointerBuffer_1.default(firstChild.data);
-                    const frameCount = content.readDWORD();
+                    const frameCount = content.readUint32();
                     let frames = [];
                     for (let i = 0; i < frameCount; i++) {
                         const rotationMatrix = {
@@ -121,8 +153,9 @@ class DFFReader {
                         position.x = content.readFloat();
                         position.y = content.readFloat();
                         position.z = content.readFloat();
+                        // Signed: the root frame is conventionally stored as -1 (0xFFFFFFFF).
                         const parentIndex = content.readDWORD();
-                        const matrixFlags = content.readDWORD();
+                        const matrixFlags = content.readUint32();
                         frames.push({
                             rotationMatrix,
                             position,
@@ -144,7 +177,7 @@ class DFFReader {
                 if (firstChild.type === 0x00000001) {
                     // Struct
                     const content = new PointerBuffer_1.default(firstChild.data);
-                    const geometryCount = content.readDWORD();
+                    const geometryCount = content.readUint32();
                     chunk.parsed = {
                         geometryCount
                     };
@@ -167,6 +200,38 @@ class DFFReader {
                         flags,
                         flagsInfo: (flags === AtomicFlags_1.default.rpATOMICCOLLISIONTEST ? "rpATOMICCOLLISIONTEST" : "rpATOMICRENDER")
                     };
+                }
+            }
+        }
+        else if (chunk.type === ChunkTypes_1.default.Light) {
+            // Light
+            // https://gtamods.com/wiki/Light_(RW_Section)
+            if (childrenChunks.length > 0) {
+                const firstChild = childrenChunks[0];
+                if (firstChild.type === ChunkTypes_1.default.Struct) {
+                    // Struct
+                    const content = new PointerBuffer_1.default(firstChild.data);
+                    const frameIndex = content.readUint32();
+                    const radius = content.readFloat();
+                    const red = content.readFloat();
+                    const green = content.readFloat();
+                    const blue = content.readFloat();
+                    const directionAngle = content.readFloat();
+                    // Some files carry a shorter Light struct without the
+                    // trailing flags/type fields - don't hard-fail on those.
+                    const flags = content.hasMore ? content.readUint16() : 0;
+                    const type = content.hasMore ? content.readUint16() : 0;
+                    const lightChunk = {
+                        frameIndex,
+                        radius,
+                        red,
+                        green,
+                        blue,
+                        directionAngle,
+                        flags,
+                        type,
+                    };
+                    chunk.parsed = lightChunk;
                 }
             }
         }
@@ -204,10 +269,10 @@ class DFFReader {
                 if (firstChild.type === 0x00000001) {
                     // Struct
                     const content = new PointerBuffer_1.default(firstChild.data);
-                    const materialCount = content.readDWORD();
+                    const materialCount = content.readUint32();
                     const materialIndices = [];
                     for (let i = 0; i < materialCount; i++) {
-                        materialIndices.push(content.readDWORD());
+                        materialIndices.push(content.readUint32());
                     }
                     chunk.parsed = {
                         materialCount,
@@ -224,12 +289,12 @@ class DFFReader {
                     // Struct
                     // https://gtamods.com/wiki/RpGeometry#Format
                     const content = new PointerBuffer_1.default(firstChild.data);
-                    const format = content.readDWORD();
+                    const format = content.readUint32();
                     content.rewind();
                     const rawFormat = content.readSection(4);
-                    const numTriangles = content.readDWORD();
-                    const numVertices = content.readDWORD();
-                    const numMorphTargets = content.readDWORD();
+                    const numTriangles = content.readUint32();
+                    const numVertices = content.readUint32();
+                    const numMorphTargets = content.readUint32();
                     // We'll read them but not use them.
                     if (chunk.version.library < 0x34000) {
                         const ambient = content.readFloat();
@@ -322,8 +387,8 @@ class DFFReader {
                             const boundingSphereY = content.readFloat();
                             const boundingSphereZ = content.readFloat();
                             const boundingSphereRadius = content.readFloat();
-                            const hasPosition = content.readDWORD();
-                            const hasNormals = content.readDWORD();
+                            const hasPosition = content.readUint32();
+                            const hasNormals = content.readUint32();
                             morphTargets.push({
                                 boundingSphereX,
                                 boundingSphereY,
@@ -354,9 +419,6 @@ class DFFReader {
                             }
                         }
                     }
-                    for (let i = 0; i < numMorphTargets; i++) {
-                        // Some more stuff
-                    }
                     // 100% unsure how correct this is
                     let formatName = "list";
                     if (format & GeometryFormat_1.default.rpGEOMETRYTRISTRIP) {
@@ -381,7 +443,7 @@ class DFFReader {
             // Frame
             const nullIndex = sectionContent.indexOf(0);
             chunk.parsed = {
-                name: new TextDecoder().decode(nullIndex >= 0 ? sectionContent.subarray(0, nullIndex) : sectionContent),
+                name: textDecoder.decode(nullIndex >= 0 ? sectionContent.subarray(0, nullIndex) : sectionContent),
             };
         }
         else if (chunk.type === ChunkTypes_1.default.Texture) {
@@ -424,19 +486,10 @@ class DFFReader {
         }
         else if (chunk.type === ChunkTypes_1.default.String) {
             // String
-            let str = "";
             const bytes = chunk.data;
-            for (let i = 0; i < bytes.length; i++) {
-                const char = bytes[i];
-                if (char === 0x00) {
-                    break;
-                }
-                else {
-                    str += String.fromCharCode(char);
-                }
-            }
+            const nullIndex = bytes.indexOf(0);
             chunk.parsed = {
-                value: str,
+                value: textDecoder.decode(nullIndex >= 0 ? bytes.subarray(0, nullIndex) : bytes),
             };
         }
         else if (chunk.type === ChunkTypes_1.default.Material) {
@@ -444,7 +497,7 @@ class DFFReader {
                 const firstChild = childrenChunks[0];
                 if (firstChild.type === ChunkTypes_1.default.Struct) {
                     const content = new PointerBuffer_1.default(firstChild.data);
-                    const flags = content.readDWORD();
+                    const flags = content.readUint32();
                     const color = {
                         r: 0,
                         g: 0,
@@ -455,7 +508,7 @@ class DFFReader {
                     color.g = content.readUint8();
                     color.b = content.readUint8();
                     color.a = content.readUint8();
-                    const unused = content.readDWORD();
+                    const unused = content.readUint32();
                     const isTextured = content.readUint32() !== 0;
                     let ambient = 0;
                     let specular = 0;
@@ -506,14 +559,14 @@ class DFFReader {
         }
         else if (chunk.type === ChunkTypes_1.default.Effect_2D) {
             const content = new PointerBuffer_1.default(chunk.data);
-            const entryCount = content.readDWORD();
+            const entryCount = content.readUint32();
             const entries = [];
             for (let i = 0; i < entryCount; i++) {
                 const posX = content.readFloat();
                 const posY = content.readFloat();
                 const posZ = content.readFloat();
                 const entryType = content.readUint32(); // Type?
-                const dataSize = content.readDWORD(); // Data size
+                const dataSize = content.readUint32(); // Data size
                 const sectionData = new PointerBuffer_1.default(content.readSection(dataSize));
                 const entry = {
                     position: {
@@ -583,7 +636,7 @@ class DFFReader {
                 }
                 else if (entryType === _2DEffectChunk_1.EntryType.PedAttractor) {
                     const pedEntry = entry;
-                    const attractorType = sectionData.readDWORD();
+                    const attractorType = sectionData.readUint32();
                     const queueDirX = sectionData.readFloat();
                     const queueDirY = sectionData.readFloat();
                     const queueDirZ = sectionData.readFloat();
@@ -594,7 +647,7 @@ class DFFReader {
                     const forwardDirY = sectionData.readFloat();
                     const forwardDirZ = sectionData.readFloat();
                     const externalScriptName = sectionData.readString(8);
-                    const pedExistingProbability = sectionData.readDWORD();
+                    const pedExistingProbability = sectionData.readUint32();
                     const unknown1 = sectionData.readUint8();
                     const unused1 = sectionData.readUint8();
                     const unknown2 = sectionData.readUint8();
@@ -676,7 +729,6 @@ class DFFReader {
                     const rotationY = sectionData.readFloat();
                     const rotationZ = sectionData.readFloat();
                     const flags = sectionData.readUint16();
-                    console.log(flags.toString(2));
                     const lineMask = 0b00000011;
                     const lineCountFlag = (flags & lineMask) >> 0;
                     const symbolMask = 0b00001100;
@@ -722,14 +774,14 @@ class DFFReader {
                 }
                 else if (entryType === _2DEffectChunk_1.EntryType.TriggerPoint) {
                     const triggerPointEntry = entry;
-                    const pointId = sectionData.readDWORD();
+                    const pointId = sectionData.readUint32();
                     triggerPointEntry.pointId = pointId;
                 }
                 else if (entryType === _2DEffectChunk_1.EntryType.CoverPoint) {
                     const coverPointEntry = entry;
                     const xDirection = sectionData.readFloat();
                     const yDirection = sectionData.readFloat();
-                    const coverType = sectionData.readDWORD();
+                    const coverType = sectionData.readUint32();
                     coverPointEntry.xDirection = xDirection;
                     coverPointEntry.yDirection = yDirection;
                     coverPointEntry.coverType = coverType;
@@ -745,7 +797,7 @@ class DFFReader {
                     const endX = sectionData.readFloat();
                     const endY = sectionData.readFloat();
                     const endZ = sectionData.readFloat();
-                    const direction = sectionData.readDWORD();
+                    const direction = sectionData.readUint32();
                     // Populate the entry
                     escalatorPointEntry.bottomPosition = {
                         x: bottomX,
@@ -777,7 +829,7 @@ class DFFReader {
         }
         else if (chunk.type === ChunkTypes_1.default.Extra_Vert_Colour) {
             const content = new PointerBuffer_1.default(chunk.data);
-            const magicNumber = content.readDWORD();
+            const magicNumber = content.readUint32();
             const vertexColours = [];
             const colourCount = (chunk.size - 4) / 4;
             if (magicNumber !== 0) {
@@ -845,7 +897,6 @@ class DFFReader {
         const frames = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame);
         const geometry = this.searchChunk(this.parsed, ChunkTypes_1.default.Geometry);
         const frameList = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame_List);
-        const frameExtensions = this.searchChunk(frameList[0], ChunkTypes_1.default.Extension);
         const atomics = this.searchChunk(this.parsed, ChunkTypes_1.default.Atomic);
         if (frameList.length !== 1) {
             throw new Error("Expected 1 FrameList but found " + frameList.length);
@@ -853,11 +904,16 @@ class DFFReader {
         if (!frameList[0].parsed) {
             throw new Error("FrameList missing parsed data section!");
         }
+        const frameExtensions = this.searchChunk(frameList[0], ChunkTypes_1.default.Extension);
         for (let atomic of atomics) {
             if (!atomic.parsed) {
                 continue;
             }
             const targetGeometry = geometry[atomic.parsed.geometryIndex];
+            if (!targetGeometry) {
+                // Atomic references a geometry index that doesn't exist in this file.
+                continue;
+            }
             const targetFrame = frames[atomic.parsed.frameIndex];
             const frameListData = (_a = frameList[0].parsed) === null || _a === void 0 ? void 0 : _a.frames[atomic.parsed.frameIndex];
             const materials = this.searchChunk(targetGeometry, ChunkTypes_1.default.Material);
@@ -869,8 +925,11 @@ class DFFReader {
                 geoName = targetFrame.parsed.name;
             }
             // This is possibly the proper way to get the name?
+            // Not every frame is guaranteed to have a matching Extension chunk
+            // (e.g. files with UV animation dictionaries or other extra top-level
+            // children), so this may legitimately be undefined.
             const targetExtension = frameExtensions[atomic.parsed.frameIndex];
-            const extensionFrames = this.searchChunk(targetExtension, ChunkTypes_1.default.Frame);
+            const extensionFrames = targetExtension ? this.searchChunk(targetExtension, ChunkTypes_1.default.Frame) : [];
             if (extensionFrames) {
                 if (extensionFrames.length > 0) {
                     if (extensionFrames[0].parsed) {
@@ -878,7 +937,7 @@ class DFFReader {
                     }
                 }
             }
-            const hAnim = this.searchChunk(targetExtension, ChunkTypes_1.default.HAnim_PLG);
+            const hAnim = targetExtension ? this.searchChunk(targetExtension, ChunkTypes_1.default.HAnim_PLG) : [];
             const defaultPosition = { x: 0, y: 0, z: 0 };
             const defaultRotationMatrix = {
                 right: { x: 0, y: 0, z: 0 },
@@ -1021,31 +1080,71 @@ class DFFReader {
         const atomicNodes = this.searchChunk(this.parsed, ChunkTypes_1.default.Atomic);
         const frameLists = this.searchChunk(this.parsed, ChunkTypes_1.default.Frame_List);
         const parsedGeometry = this.getGeometry();
+        // getGeometry() builds its array by walking `atomicNodes` in this same order,
+        // skipping any atomic whose geometryIndex doesn't resolve to a real Geometry
+        // chunk. Mirror that exact walk/skip here so each atomic maps back to the
+        // right entry in `parsedGeometry` - atomic.parsed.geometryIndex is NOT a
+        // valid index into `parsedGeometry` (it indexes the Geometry List, not the
+        // per-atomic output array).
+        const geometryChunks = this.searchChunk(this.parsed, ChunkTypes_1.default.Geometry);
+        const geometryByAtomic = new Map();
+        let parsedGeometryIndex = 0;
+        for (const atomic of atomicNodes) {
+            if (!atomic.parsed) {
+                continue;
+            }
+            if (!geometryChunks[atomic.parsed.geometryIndex]) {
+                continue;
+            }
+            geometryByAtomic.set(atomic, parsedGeometry[parsedGeometryIndex]);
+            parsedGeometryIndex++;
+        }
         const mainNodes = [];
-        if (frameLists.length > 1) {
-            throw new Error("More than a single frame list, unexpected");
+        if (frameLists.length !== 1) {
+            throw new Error("Expected 1 FrameList but found " + frameLists.length);
         }
         const frameList = frameLists[0];
         if (frameList.parsed) {
-            for (let myIndex = 0; myIndex < frameList.parsed.frameCount; myIndex++) {
-                const frame = frameList.parsed.frames[myIndex];
+            const frameListParsed = frameList.parsed;
+            // getChildren() used to re-scan every frame/atomic in the file for
+            // each node it built, making tree construction O(frameCount^2).
+            // Index children by parentIndex/frameIndex once up front instead.
+            const childFrameIndicesByParent = new Map();
+            for (let mi = 0; mi < frameListParsed.frameCount; mi++) {
+                const parentIndex = frameListParsed.frames[mi].parentIndex;
+                let siblings = childFrameIndicesByParent.get(parentIndex);
+                if (!siblings) {
+                    siblings = [];
+                    childFrameIndicesByParent.set(parentIndex, siblings);
+                }
+                siblings.push(mi);
+            }
+            const atomicsByFrameIndex = new Map();
+            for (const atomic of atomicNodes) {
+                if (!atomic.parsed) {
+                    continue;
+                }
+                let siblings = atomicsByFrameIndex.get(atomic.parsed.frameIndex);
+                if (!siblings) {
+                    siblings = [];
+                    atomicsByFrameIndex.set(atomic.parsed.frameIndex, siblings);
+                }
+                siblings.push(atomic);
+            }
+            for (let myIndex = 0; myIndex < frameListParsed.frameCount; myIndex++) {
+                const frame = frameListParsed.frames[myIndex];
                 if (frame.parentIndex >= 0) {
                     continue;
                 }
                 const getChildren = (parentIndex, depth = 0) => {
-                    if (!frameList.parsed) {
-                        return [];
-                    }
                     if (depth > 1000) {
                         return [];
                     }
                     const children = [];
                     // Find child nodes
-                    for (let mi = 0; mi < frameList.parsed.frameCount; mi++) {
-                        const fr = frameList.parsed.frames[mi];
-                        if (fr.parentIndex !== parentIndex) {
-                            continue;
-                        }
+                    const childFrameIndices = childFrameIndicesByParent.get(parentIndex) || [];
+                    for (const mi of childFrameIndices) {
+                        const fr = frameListParsed.frames[mi];
                         // This should probably use the Extension chunks instead.
                         const mFrame = frameNodes[mi];
                         let frameName = "Unknown Frame";
@@ -1061,21 +1160,18 @@ class DFFReader {
                         };
                         children.push(mNode);
                     }
-                    for (let atomic of atomicNodes) {
-                        if (!atomic.parsed) {
-                            continue;
+                    const childAtomics = atomicsByFrameIndex.get(parentIndex) || [];
+                    for (const atomic of childAtomics) {
+                        const geometry = geometryByAtomic.get(atomic);
+                        if (geometry) {
+                            children.push(geometry);
                         }
-                        if (atomic.parsed.frameIndex !== parentIndex) {
-                            continue;
-                        }
-                        const geometry = parsedGeometry[atomic.parsed.geometryIndex];
-                        children.push(geometry);
                     }
                     return children;
                 };
                 const myFrame = frameNodes[myIndex];
                 const myNode = {
-                    name: myFrame.parsed && myFrame.parsed.name || "",
+                    name: (myFrame && myFrame.parsed && myFrame.parsed.name) || "",
                     children: getChildren(myIndex),
                     position: frame.position,
                     rotationMatrix: frame.rotationMatrix,

@@ -1,4 +1,5 @@
 "use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 var LightTypes;
 (function (LightTypes) {
     LightTypes[LightTypes["rpLIGHTDIRECTIONAL"] = 1] = "rpLIGHTDIRECTIONAL";
@@ -7,4 +8,5 @@ var LightTypes;
     LightTypes[LightTypes["rpLIGHTSPOT"] = 129] = "rpLIGHTSPOT";
     LightTypes[LightTypes["rpLIGHTSPOTSOFT"] = 129] = "rpLIGHTSPOTSOFT";
 })(LightTypes || (LightTypes = {}));
+exports.default = LightTypes;
 //# sourceMappingURL=LightTypes.js.map

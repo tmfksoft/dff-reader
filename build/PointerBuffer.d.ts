@@ -1,11 +1,13 @@
 export default class PointerBuffer {
     protected data: Uint8Array;
+    private static readonly textDecoder;
     pointer: number;
-    pointerHistory: number[];
+    private lastReadLength;
     size: number;
     private view;
     get rawData(): Uint8Array<ArrayBufferLike>;
     get hasMore(): boolean;
+    hasBytes(length: number): boolean;
     constructor(data: Uint8Array);
     pointerCheck(dataSize: number): void;
     readDWORD(): number;

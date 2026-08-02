@@ -1,4 +1,5 @@
 import LightFlags from "../../enums/LightFlags";
+import LightTypes from "../../enums/LightTypes";
 /**
  * The wiki suggests not to use actual lights and instead GTA:SA fakes it all
  * by projecting coronas and light cone textures etc.

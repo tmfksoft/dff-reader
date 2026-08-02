@@ -16,6 +16,26 @@ import Base2DEffectChunk, { Base2DEffectEntry, CoverPoint2DEffectEntry, EffectEn
 import RGBA from "./interfaces/RGBA";
 import ExtraVertColour from "./interfaces/chunks/ExtraVertColour";
 
+// Chunk types whose content is itself a sequence of child chunks, rather than
+// a flat data payload. Hoisted out of parseChunk() - it's recursed into for
+// every chunk in the file, so rebuilding this on every call added up.
+const containerTypes = new Set<ChunkTypes>([
+	ChunkTypes.Extension, // Extension
+	ChunkTypes.Material, // Material
+	ChunkTypes.Material_List, // Material List
+	ChunkTypes.Clump, // Clump
+	ChunkTypes.Frame_List, // Frame List
+	ChunkTypes.Geometry_List, // Geometry List
+	ChunkTypes.Geometry, // Geometry
+	ChunkTypes.Atomic, // Atomic
+	ChunkTypes.Texture, // Texture
+	ChunkTypes.Light, // Light
+]);
+
+// Shared across all string decodes in this module instead of constructing a
+// new TextDecoder per chunk (Frame names, texture names, alpha names, ...).
+const textDecoder = new TextDecoder();
+
 class DFFReader {
 
 	public rawData: PointerBuffer;
@@ -28,17 +48,43 @@ class DFFReader {
 	}
 
 	public parseFile(): RawChunk {
-		return this.parseChunk(this.rawData);
+		// A .dff stream isn't always a single top-level chunk - some files
+		// (e.g. ones with UV animated textures) are preceded by a top-level
+		// UV Animation Dictionary (0x2B) chunk before the actual RwClump.
+		// Walk every top-level chunk and return the Clump; anything else
+		// found at the top level isn't currently exposed.
+		let maxLoop = 1000;
+		let clump: RawChunk | undefined;
+		// A stray handful of bytes after the last real chunk (padding,
+		// alignment, a trailing null) isn't enough to hold another chunk
+		// header (12 bytes) - treat that as end of file, not a chunk to parse.
+		// A file has exactly one Clump (the rest of this class assumes that
+		// too), so stop as soon as it's found instead of parsing - and
+		// immediately discarding - whatever else follows it.
+		while (!clump && this.rawData.hasBytes(12) && maxLoop > -1) {
+			const chunk = this.parseChunk(this.rawData);
+			if (chunk.type === ChunkTypes.Clump) {
+				clump = chunk;
+			}
+			maxLoop--;
+		}
+		if (maxLoop <= 0) {
+			console.warn("HIT MAX LOOP!");
+		}
+		if (!clump) {
+			throw new Error("No Clump chunk found in file");
+		}
+		return clump;
 	}
 
 	parseChunk(buf: PointerBuffer): RawChunk {
 
-		const sectionHeader = buf.readSection(12);
-
-		const headerView = new DataView(sectionHeader.buffer, sectionHeader.byteOffset, sectionHeader.byteLength);
-		const sectionType = headerView.getUint32(0, true);
-		const sectionSize = headerView.getUint32(4, true);
-		const sectionLibrary = headerView.getUint32(8, true);
+		// buf's own DataView already covers this data - read the header
+		// straight off it instead of slicing out a section and wrapping a
+		// second DataView around it just to read 12 bytes.
+		const sectionType = buf.readUint32();
+		const sectionSize = buf.readUint32();
+		const sectionLibrary = buf.readUint32();
 		const sectionContent = buf.readSection(sectionSize);
 
 		const chunk: RawChunk = {
@@ -55,32 +101,15 @@ class DFFReader {
 
 		const childrenChunks: RawChunk[] = [];
 
-		const containerTypes = [
-			ChunkTypes.Extension, // Extension
-			ChunkTypes.Material, // Material
-			ChunkTypes.Material_List, // Material List
-			ChunkTypes.Clump, // Clump
-			ChunkTypes.Frame_List, // Frame List
-			ChunkTypes.Geometry_List, // Geometry List
-			ChunkTypes.Geometry, // Geometry
-			ChunkTypes.Atomic, // Atomic
-			ChunkTypes.Texture, // Texture
-			ChunkTypes.Light, // Light
-		];
-
-		if (containerTypes.includes(chunk.type)) {
+		if (containerTypes.has(chunk.type)) {
 			let maxLoop = 1000;
 			const content = new PointerBuffer(sectionContent);
 			while (content.hasMore && maxLoop > -1) {
-				const cType = content.readUint32();
-				const cSize = content.readUint32();
-				const cLibrary = content.readUint32();
-
-				// Rewind the buffer and read the whole section out of it.
-				content.backward(12);
-				const wholeChunk = content.readSection(12 + cSize);
-				
-				childrenChunks.push(this.parseChunk(new PointerBuffer(wholeChunk)));
+				// parseChunk reads exactly one chunk's header + body (bounded by
+				// its own sectionSize) straight off `content` and advances its
+				// pointer past it, so there's no need to pre-slice/re-wrap each
+				// child into its own buffer here first.
+				childrenChunks.push(this.parseChunk(content));
 
 				maxLoop--;
 			}
@@ -499,7 +528,7 @@ class DFFReader {
 			// Frame
 			const nullIndex = sectionContent.indexOf(0);
 			chunk.parsed = {
-				name: new TextDecoder().decode(nullIndex >= 0 ? sectionContent.subarray(0, nullIndex) : sectionContent),
+				name: textDecoder.decode(nullIndex >= 0 ? sectionContent.subarray(0, nullIndex) : sectionContent),
 			};
 		} else if (chunk.type === ChunkTypes.Texture) {
 			// Texture
@@ -551,18 +580,10 @@ class DFFReader {
 			}
 		} else if (chunk.type === ChunkTypes.String) {
 			// String
-			let str = "";
 			const bytes = chunk.data;
-			for (let i=0; i < bytes.length; i++) {
-				const char = bytes[i];
-				if (char === 0x00) {
-					break;
-				} else {
-					str += String.fromCharCode(char);
-				}
-			}
+			const nullIndex = bytes.indexOf(0);
 			chunk.parsed = {
-				value: str,
+				value: textDecoder.decode(nullIndex >= 0 ? bytes.subarray(0, nullIndex) : bytes),
 			};
 		} else if (chunk.type === ChunkTypes.Material) {
 			if (childrenChunks.length > 1) {
@@ -1323,32 +1344,56 @@ class DFFReader {
 		const frameList = frameLists[0];
 
 		if (frameList.parsed) {
-			for (let myIndex=0; myIndex<frameList.parsed.frameCount; myIndex++) {
-				const frame = frameList.parsed.frames[myIndex];
-	
+			const frameListParsed = frameList.parsed;
+
+			// getChildren() used to re-scan every frame/atomic in the file for
+			// each node it built, making tree construction O(frameCount^2).
+			// Index children by parentIndex/frameIndex once up front instead.
+			const childFrameIndicesByParent = new Map<number, number[]>();
+			for (let mi=0; mi<frameListParsed.frameCount; mi++) {
+				const parentIndex = frameListParsed.frames[mi].parentIndex;
+				let siblings = childFrameIndicesByParent.get(parentIndex);
+				if (!siblings) {
+					siblings = [];
+					childFrameIndicesByParent.set(parentIndex, siblings);
+				}
+				siblings.push(mi);
+			}
+
+			const atomicsByFrameIndex = new Map<number, RawChunk[]>();
+			for (const atomic of atomicNodes) {
+				if (!atomic.parsed) {
+					continue;
+				}
+				let siblings = atomicsByFrameIndex.get(atomic.parsed.frameIndex);
+				if (!siblings) {
+					siblings = [];
+					atomicsByFrameIndex.set(atomic.parsed.frameIndex, siblings);
+				}
+				siblings.push(atomic);
+			}
+
+			for (let myIndex=0; myIndex<frameListParsed.frameCount; myIndex++) {
+				const frame = frameListParsed.frames[myIndex];
+
 				if (frame.parentIndex >= 0) {
 					continue;
 				}
-	
-				
+
+
 				const getChildren = (parentIndex: number, depth: number = 0): (Geometry | GeometryNode)[] => {
-	
-					if (!frameList.parsed) {
-						return [];
-					}
+
 					if (depth > 1000) {
 						return [];
 					}
-	
+
 					const children: (GeometryNode | Geometry)[] = [];
-	
+
 					// Find child nodes
-					for (let mi=0; mi<frameList.parsed.frameCount; mi++) {
-						const fr = frameList.parsed.frames[mi];
-						if (fr.parentIndex !== parentIndex) {
-							continue;
-						}
-	
+					const childFrameIndices = childFrameIndicesByParent.get(parentIndex) || [];
+					for (const mi of childFrameIndices) {
+						const fr = frameListParsed.frames[mi];
+
 						// This should probably use the Extension chunks instead.
 						const mFrame = frameNodes[mi];
 						let frameName = "Unknown Frame";
@@ -1359,29 +1404,22 @@ class DFFReader {
 						const mNode: GeometryNode = {
 							name: frameName,
 							children: getChildren(mi, depth + 1),
-	
+
 							position: fr.position,
 							rotationMatrix: fr.rotationMatrix,
 							matrixFlags: fr.matrixFlags,
 						}
 						children.push(mNode);
 					}
-	
-					for (let atomic of atomicNodes) {
-						if (!atomic.parsed) {
-							continue;
-						}
-	
-						if (atomic.parsed.frameIndex !== parentIndex) {
-							continue;
-						}
 
+					const childAtomics = atomicsByFrameIndex.get(parentIndex) || [];
+					for (const atomic of childAtomics) {
 						const geometry = geometryByAtomic.get(atomic);
 						if (geometry) {
 							children.push(geometry);
 						}
 					}
-	
+
 					return children;
 				}
 	

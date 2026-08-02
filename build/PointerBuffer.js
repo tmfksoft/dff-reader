@@ -11,12 +11,19 @@ class PointerBuffer {
         }
         return true;
     }
+    // Whether at least `length` more bytes remain - use this instead of
+    // `hasMore` before reading another whole chunk header at the top level,
+    // where a handful of stray trailing/padding bytes after the last real
+    // chunk shouldn't be treated as the start of one more chunk to parse.
+    hasBytes(length) {
+        return this.pointer + length <= this.data.length;
+    }
     constructor(data) {
         this.data = data;
-        // Uses the history to get the pointer location
-        // It's slow but cool.
         this.pointer = 0;
-        this.pointerHistory = [];
+        // rewind() can only ever undo the single most recent forward/backward call,
+        // so we only need to remember that one length - not a full growing history.
+        this.lastReadLength = 0;
         this.size = 0;
         this.size = data.byteLength;
         this.view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -72,7 +79,7 @@ class PointerBuffer {
         const rawBytes = this.readSection(length);
         const nullIndex = rawBytes.indexOf(0);
         const bytes = nullIndex >= 0 ? rawBytes.subarray(0, nullIndex) : rawBytes;
-        return new TextDecoder().decode(bytes);
+        return PointerBuffer.textDecoder.decode(bytes);
     }
     readChunks(length) {
         let chunks = [];
@@ -86,18 +93,21 @@ class PointerBuffer {
     // Forwards the pointer without read operations.
     forward(length) {
         this.pointer += length;
-        this.pointerHistory.push(length);
+        this.lastReadLength = length;
     }
     backward(length) {
-        this.pointer = Math.abs(this.pointer - length);
-        this.pointerHistory.push(length);
+        if (length > this.pointer) {
+            throw new Error(`Attempting to move pointer before start of buffer! ${this.pointer} - ${length} < 0`);
+        }
+        this.pointer -= length;
+        this.lastReadLength = -length;
     }
     // Undoes the last read
     rewind() {
-        const lastRead = this.pointerHistory[this.pointerHistory.length - 1];
-        this.pointer -= lastRead;
-        this.pointerHistory.push(-lastRead);
+        this.pointer -= this.lastReadLength;
+        this.lastReadLength = -this.lastReadLength;
     }
 }
+PointerBuffer.textDecoder = new TextDecoder();
 exports.default = PointerBuffer;
 //# sourceMappingURL=PointerBuffer.js.map
