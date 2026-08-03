@@ -1066,13 +1066,22 @@ class DFFReader {
                 content.readFloat(), content.readFloat(), content.readFloat(), content.readFloat(),
             ]);
         }
+        // Each bone matrix is 4 vectors of 4 floats - right/up/at/position,
+        // each with a trailing padding float (always 0, not a real 4th
+        // component) rather than a plain row/column-major 4x4 matrix. See
+        // the field's own doc comment in SkinChunk.ts for how this was
+        // confirmed.
         const boneInverseMatrices = [];
         for (let i = 0; i < numBones; i++) {
-            const matrix = [];
-            for (let j = 0; j < 16; j++) {
-                matrix.push(content.readFloat());
-            }
-            boneInverseMatrices.push(matrix);
+            const right = { x: content.readFloat(), y: content.readFloat(), z: content.readFloat() };
+            content.readFloat(); // padding
+            const up = { x: content.readFloat(), y: content.readFloat(), z: content.readFloat() };
+            content.readFloat(); // padding
+            const at = { x: content.readFloat(), y: content.readFloat(), z: content.readFloat() };
+            content.readFloat(); // padding
+            const position = { x: content.readFloat(), y: content.readFloat(), z: content.readFloat() };
+            content.readFloat(); // padding
+            boneInverseMatrices.push({ right, up, at, position });
         }
         return {
             numBones,

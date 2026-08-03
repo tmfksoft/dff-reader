@@ -32,8 +32,28 @@ export default interface SkinChunk extends SkinPLGHeader {
 	vertexBoneIndices: [number, number, number, number][],
 	vertexBoneWeights: [number, number, number, number][],
 
-	// One 4x4 matrix per bone (16 floats, row-major), transforming a vertex
-	// from model space into that bone's local space at bind pose - exactly
-	// what THREE.Skeleton.boneInverses expects.
-	boneInverseMatrices: number[][],
+	// One inverse bind matrix per bone, transforming a vertex from model
+	// space into that bone's local space at bind pose - exactly what
+	// THREE.Skeleton.boneInverses expects (build via
+	// `new THREE.Matrix4().makeBasis(right, up, at).setPosition(position.x, position.y, position.z)`).
+	//
+	// NOT a plain 16-float 4x4 matrix, despite the raw chunk data being 16
+	// floats per bone - each of the 4 "rows" is a 3-component vector plus a
+	// trailing padding float that's always 0 (confirmed on every bone of a
+	// real ped model, army.dff - all 32 had a literal 0 in that position,
+	// where a genuine row/column-major 4x4 matrix would need a 1). Same
+	// shape as Geometry.rotationMatrix/position for exactly that reason -
+	// RenderWare stores both a frame's local transform and a bone's inverse
+	// bind transform the same way. Two earlier attempts to treat this as a
+	// plain flat array (via THREE's Matrix4.fromArray(), then via
+	// Matrix4.set() assuming the opposite element order) both produced
+	// visibly wrong skinning - the mistake in both cases was the 16-floats-
+	// equals-a-complete-matrix assumption itself, not which order to read
+	// them in.
+	boneInverseMatrices: {
+		right: { x: number, y: number, z: number },
+		up: { x: number, y: number, z: number },
+		at: { x: number, y: number, z: number },
+		position: { x: number, y: number, z: number },
+	}[],
 }
