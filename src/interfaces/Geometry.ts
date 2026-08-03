@@ -1,6 +1,7 @@
 import Base2DEffectChunk from "./chunks/2DEffectChunk";
 import Material from "./Material";
 import RGBA from "./RGBA";
+import SkinChunk from "./chunks/SkinChunk";
 import Triangle from "./Triangle";
 
 export default interface Geometry {
@@ -29,6 +30,7 @@ export default interface Geometry {
 
 	materials: Material[],
 	effect?: Base2DEffectChunk,
+	skin?: SkinChunk,
 
 	rotationMatrix: {
 		right: { x: number, y: number, z: number },

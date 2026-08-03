@@ -81,6 +81,7 @@ Each `Geometry` object contains:
 | `nightVertexColours` | `RGBA[] \| undefined` | Night-time vertex colours (SA extension) |
 | `materials` | `Material[]` | Material/texture info |
 | `effect` | `Base2DEffectChunk \| undefined` | 2D effects (lights, particles, etc.) |
+| `skin` | `SkinChunk \| undefined` | Per-vertex bone indices/weights + bone inverse matrices (SkinPLG), present on skinned meshes (peds, some vehicles) |
 | `position` | `{ x, y, z }` | Frame position |
 | `rotationMatrix` | `{ right, up, at }` | Frame rotation matrix |
 | `parentIndex` | `number` | Parent frame index (-1 = root) |
@@ -229,7 +230,7 @@ The parser handles the following RenderWare chunks:
 
 - Clump, Frame List, Geometry List, Geometry, Atomic, Light
 - Material List, Material, Texture, String
-- Bin Mesh PLG, HAnim PLG, Breakable
+- Bin Mesh PLG, HAnim PLG, Skin PLG, Breakable
 - 2D Effect (lights, particles, ped attractors, enter/exit, street signs, trigger points, cover points, escalators)
 - Extra Vertex Colour (night vertex colours)
 - UV Animation Dictionary, Anim Animation, UV Animation PLG (scrolling/flashing texture animation, e.g. casino signs)

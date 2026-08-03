@@ -661,6 +661,33 @@ class DFFReader {
                     keyFrameSize, nodes: keyFrames });
             }
         }
+        else if (chunk.type === ChunkTypes_1.default.Skin_PLG) {
+            // Only the header is parsed here - the per-vertex bone
+            // indices/weights that follow need this Geometry's numVertices
+            // to know where they end (there's no count stored in this chunk
+            // itself, since it also has to fit variable-length, intentionally
+            // unparsed platform-specific "skin split" data after the bone
+            // matrices). Chunks are parsed depth-first bottom-up, so the
+            // sibling Geometry struct's numVertices isn't known yet at this
+            // point - see DFFReader.resolveSkin(), called from getGeometry()
+            // once both this header and the Geometry's own parse are ready.
+            const content = new PointerBuffer_1.default(chunk.data);
+            const numBones = content.readUint8();
+            const numUsedBones = content.readUint8();
+            const maxWeightsPerVertex = content.readUint8();
+            content.readUint8(); // unused padding byte
+            const usedBoneIds = [];
+            for (let i = 0; i < numUsedBones; i++) {
+                usedBoneIds.push(content.readUint8());
+            }
+            const header = {
+                numBones,
+                numUsedBones,
+                maxWeightsPerVertex,
+                usedBoneIds,
+            };
+            chunk.parsed = header;
+        }
         else if (chunk.type === ChunkTypes_1.default.Effect_2D) {
             const content = new PointerBuffer_1.default(chunk.data);
             const entryCount = content.readUint32();
@@ -1012,6 +1039,51 @@ class DFFReader {
         }
         return undefined;
     }
+    // Finishes parsing a Skin_PLG chunk now that the sibling Geometry's
+    // numVertices is known (see the comment on Skin_PLG parsing above for why
+    // this can't happen at initial parse time). Re-reads from the chunk's
+    // raw data rather than resuming a saved pointer position - simpler than
+    // threading a PointerBuffer's read position back out of parseChunk(),
+    // and this only ever runs once per skinned geometry.
+    resolveSkin(chunk, numVertices) {
+        if (!chunk.parsed) {
+            return undefined;
+        }
+        const { numBones, numUsedBones, maxWeightsPerVertex, usedBoneIds } = chunk.parsed;
+        const content = new PointerBuffer_1.default(chunk.data);
+        // Skip back past the header (3 header bytes + 1 padding + usedBoneIds)
+        // exactly as it was originally read.
+        content.readSection(4 + numUsedBones);
+        const vertexBoneIndices = [];
+        for (let i = 0; i < numVertices; i++) {
+            vertexBoneIndices.push([
+                content.readUint8(), content.readUint8(), content.readUint8(), content.readUint8(),
+            ]);
+        }
+        const vertexBoneWeights = [];
+        for (let i = 0; i < numVertices; i++) {
+            vertexBoneWeights.push([
+                content.readFloat(), content.readFloat(), content.readFloat(), content.readFloat(),
+            ]);
+        }
+        const boneInverseMatrices = [];
+        for (let i = 0; i < numBones; i++) {
+            const matrix = [];
+            for (let j = 0; j < 16; j++) {
+                matrix.push(content.readFloat());
+            }
+            boneInverseMatrices.push(matrix);
+        }
+        return {
+            numBones,
+            numUsedBones,
+            maxWeightsPerVertex,
+            usedBoneIds,
+            vertexBoneIndices,
+            vertexBoneWeights,
+            boneInverseMatrices,
+        };
+    }
     getGeometry() {
         var _a, _b, _c, _d, _e;
         const geometryList = [];
@@ -1074,6 +1146,11 @@ class DFFReader {
                 const matrixFlags = (_e = frameListData === null || frameListData === void 0 ? void 0 : frameListData.matrixFlags) !== null && _e !== void 0 ? _e : defaultMatrixFlags;
                 const twoFX = this.searchChunk(targetGeometry, ChunkTypes_1.default.Effect_2D);
                 const vertColours = this.searchChunk(targetGeometry, ChunkTypes_1.default.Extra_Vert_Colour);
+                const skinChunks = this.searchChunk(targetGeometry, ChunkTypes_1.default.Skin_PLG);
+                let skin;
+                if (skinChunks.length > 0) {
+                    skin = this.resolveSkin(skinChunks[0], targetGeometry.parsed.numVertices);
+                }
                 let extraVertColours;
                 if (vertColours.length > 0) {
                     if (vertColours[0].parsed) {
@@ -1095,6 +1172,7 @@ class DFFReader {
                         }
                         return Object.assign(Object.assign({}, m.parsed), { uvAnimation });
                     }), nightVertexColours: extraVertColours, effect,
+                    skin,
                     position,
                     rotationMatrix,
                     parentIndex,

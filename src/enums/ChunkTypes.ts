@@ -20,6 +20,7 @@ enum ChunkTypes {
     Geometry_List = 0x0000001A,        // https://gtamods.com/wiki/Geometry_List_(RW_Section)
     Right_To_Render = 0x0000001F,      // https://gtamods.com/wiki/Right_To_Render_(RW_Section)
     UV_Animation_Dictionary = 0x0000002B, // Container of up to 8 named Anim_Animation entries, sits alongside the Clump
+    Skin_PLG = 0x00000116,              // https://gtamods.com/wiki/Skin_PLG_(RW_Section) - per-vertex bone indices/weights + bone inverse matrices, nested in a Geometry's Extension
     HAnim_PLG = 0x0000011E,            // https://gtamods.com/wiki/HAnim_PLG_(RW_Section)
     Material_Effects_PLG = 0x00000120, // https://gtamods.com/wiki/Material_Effects_PLG_(RW_Section)
     UV_Animation_PLG = 0x00000135,     // Nested in a Material's Extension - references Anim_Animation entries by name

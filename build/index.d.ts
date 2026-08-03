@@ -29,6 +29,7 @@ declare class DFFReader {
      * Returns undefined if the file has no dictionary, or no entry with that name.
      */
     getUVAnimation(name: string): AnimAnimationChunk | undefined;
+    private resolveSkin;
     getGeometry(): Geometry[];
     /**
      * @deprecated - This doesn't produce a faithful model anymore!

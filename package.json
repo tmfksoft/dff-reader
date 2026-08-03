@@ -1,6 +1,6 @@
 {
   "name": "@majesticfudgie/dff-reader",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "main": "build/index.js",
   "license": "MIT",
   "typings": "build/index.d.ts",

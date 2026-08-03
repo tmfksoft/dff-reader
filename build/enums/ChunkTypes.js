@@ -21,6 +21,7 @@ var ChunkTypes;
     ChunkTypes[ChunkTypes["Geometry_List"] = 26] = "Geometry_List";
     ChunkTypes[ChunkTypes["Right_To_Render"] = 31] = "Right_To_Render";
     ChunkTypes[ChunkTypes["UV_Animation_Dictionary"] = 43] = "UV_Animation_Dictionary";
+    ChunkTypes[ChunkTypes["Skin_PLG"] = 278] = "Skin_PLG";
     ChunkTypes[ChunkTypes["HAnim_PLG"] = 286] = "HAnim_PLG";
     ChunkTypes[ChunkTypes["Material_Effects_PLG"] = 288] = "Material_Effects_PLG";
     ChunkTypes[ChunkTypes["UV_Animation_PLG"] = 309] = "UV_Animation_PLG";
