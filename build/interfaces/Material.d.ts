@@ -1,4 +1,5 @@
 import Texture from "./Texture";
+import { UVAnimationPLGChunk } from "./chunks/UVAnimationChunk";
 interface BasicMaterial {
     color: {
         r: number;
@@ -10,6 +11,7 @@ interface BasicMaterial {
     ambient: number;
     specular: number;
     diffuse: number;
+    uvAnimation?: UVAnimationPLGChunk;
 }
 interface UnTexturedMaterial extends BasicMaterial {
     isTextured: false;

@@ -16,10 +16,13 @@ enum ChunkTypes {
     Clump = 0x00000010,                // https://gtamods.com/wiki/RpClump
     Light = 0x00000012,                // https://gtamods.com/wiki/Light_(RW_Section)
     Atomic = 0x00000014,               // https://gtamods.com/wiki/Atomic_(RW_Section)
+    Anim_Animation = 0x0000001B,       // https://gtamods.com/wiki/Anim_Animation_(RW_Section) - generic RW keyframed animation section
     Geometry_List = 0x0000001A,        // https://gtamods.com/wiki/Geometry_List_(RW_Section)
     Right_To_Render = 0x0000001F,      // https://gtamods.com/wiki/Right_To_Render_(RW_Section)
+    UV_Animation_Dictionary = 0x0000002B, // Container of up to 8 named Anim_Animation entries, sits alongside the Clump
     HAnim_PLG = 0x0000011E,            // https://gtamods.com/wiki/HAnim_PLG_(RW_Section)
     Material_Effects_PLG = 0x00000120, // https://gtamods.com/wiki/Material_Effects_PLG_(RW_Section)
+    UV_Animation_PLG = 0x00000135,     // Nested in a Material's Extension - references Anim_Animation entries by name
     Bin_Mesh_PLG = 0x0000050E,         // https://gtamods.com/wiki/Bin_Mesh_PLG_(RW_Section)
     Native_Data_PLG = 0x00000510,      // https://gtamods.com/wiki/Native_Data_PLG_(RW_Section)
     

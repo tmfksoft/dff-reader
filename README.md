@@ -108,6 +108,10 @@ Each `Geometry` object contains:
   ambient: number,
   specular: number,
   diffuse: number,
+  uvAnimation?: {            // present if this material has a scrolling/flashing UV animation
+    channelMask: number,
+    channels: { slot: number, name: string }[],  // look up via dff.getUVAnimation(name)
+  },
 }
 
 // Textured
@@ -124,7 +128,11 @@ Each `Geometry` object contains:
     uAddressing: number,
     vAddressing: number,
     mipLevels: number,
-  }
+  },
+  uvAnimation?: {
+    channelMask: number,
+    channels: { slot: number, name: string }[],
+  },
 }
 ```
 
@@ -149,6 +157,33 @@ interface GeometryNode {
 ### `dff.parsed: RawChunk`
 
 The raw parsed chunk tree, useful for debugging or accessing chunk types not yet covered by the higher-level API.
+
+---
+
+### `dff.uvAnimationDictionary: RawChunk | undefined`
+
+Set when the file has a top-level UV Animation Dictionary — present on models with scrolling/flashing UV-animated
+textures (e.g. casino signs/lights). Its `children` are the individual animations (`ChunkTypes.Anim_Animation`).
+Each material returned by `getGeometry()` that references an animation exposes it via `material.uvAnimation`
+(the channel name(s) to look up here).
+
+---
+
+### `dff.getUVAnimation(name: string): AnimAnimationChunk | undefined`
+
+Looks up a UV animation by name from `dff.uvAnimationDictionary` — the name a material's
+`uvAnimation.channels[n].name` references. Returns `undefined` if the file has no dictionary, or no entry with
+that name.
+
+```ts
+const geometry = dff.getGeometry();
+for (const material of geometry[0].materials) {
+  for (const channel of material.uvAnimation?.channels ?? []) {
+    const anim = dff.getUVAnimation(channel.name);
+    // anim.duration, anim.numFrames, anim.keyFrames[]...
+  }
+}
+```
 
 ---
 
@@ -197,6 +232,7 @@ The parser handles the following RenderWare chunks:
 - Bin Mesh PLG, HAnim PLG, Breakable
 - 2D Effect (lights, particles, ped attractors, enter/exit, street signs, trigger points, cover points, escalators)
 - Extra Vertex Colour (night vertex colours)
+- UV Animation Dictionary, Anim Animation, UV Animation PLG (scrolling/flashing texture animation, e.g. casino signs)
 
 ---
 

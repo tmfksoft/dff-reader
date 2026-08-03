@@ -3,10 +3,12 @@ import ChunkTypes from "./enums/ChunkTypes";
 import RawChunk from "./interfaces/RawChunk";
 import Geometry from "./interfaces/Geometry";
 import GeometryNode from "./interfaces/GeometryNode";
+import AnimAnimationChunk, { UVAnimationDictionaryChunk } from "./interfaces/chunks/UVAnimationChunk";
 declare class DFFReader {
     protected data: Uint8Array;
     rawData: PointerBuffer;
     parsed: RawChunk;
+    uvAnimationDictionary?: RawChunk<UVAnimationDictionaryChunk>;
     constructor(data: Uint8Array);
     parseFile(): RawChunk;
     parseChunk(buf: PointerBuffer): RawChunk;
@@ -21,6 +23,12 @@ declare class DFFReader {
      * @returns Array of matching chunks
      */
     searchChunk<T = any>(chunk: RawChunk, type: ChunkTypes): RawChunk<T>[];
+    /**
+     * Looks up a UV animation by name from this file's UV Animation Dictionary
+     * (the name a material's `uvAnimation.channels[n].name` references).
+     * Returns undefined if the file has no dictionary, or no entry with that name.
+     */
+    getUVAnimation(name: string): AnimAnimationChunk | undefined;
     getGeometry(): Geometry[];
     /**
      * @deprecated - This doesn't produce a faithful model anymore!

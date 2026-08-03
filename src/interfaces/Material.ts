@@ -1,4 +1,5 @@
 import Texture from "./Texture";
+import { UVAnimationPLGChunk } from "./chunks/UVAnimationChunk";
 
 interface BasicMaterial {
 	color: { r: number, g: number, b: number, a: number },
@@ -10,6 +11,9 @@ interface BasicMaterial {
 	specular: number,
 	diffuse: number,
 
+	// Present if this material has an animated UV (scrolling/flashing texture).
+	// Channel names reference entries in DFFReader.uvAnimationDictionary.
+	uvAnimation?: UVAnimationPLGChunk,
 }
 interface UnTexturedMaterial extends BasicMaterial {
 	isTextured: false,

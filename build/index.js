@@ -23,6 +23,8 @@ const containerTypes = new Set([
     ChunkTypes_1.default.Atomic, // Atomic
     ChunkTypes_1.default.Texture, // Texture
     ChunkTypes_1.default.Light, // Light
+    ChunkTypes_1.default.UV_Animation_Dictionary, // UV Animation Dictionary
+    ChunkTypes_1.default.UV_Animation_PLG, // UV Animation PLG
 ]);
 // Shared across all string decodes in this module instead of constructing a
 // new TextDecoder per chunk (Frame names, texture names, alpha names, ...).
@@ -45,12 +47,16 @@ class DFFReader {
         // alignment, a trailing null) isn't enough to hold another chunk
         // header (12 bytes) - treat that as end of file, not a chunk to parse.
         // A file has exactly one Clump (the rest of this class assumes that
-        // too), so stop as soon as it's found instead of parsing - and
-        // immediately discarding - whatever else follows it.
+        // too), and the UV Animation Dictionary (when present) is only ever
+        // seen ahead of it, so stop as soon as the Clump is found instead of
+        // parsing - and immediately discarding - whatever else follows it.
         while (!clump && this.rawData.hasBytes(12) && maxLoop > -1) {
             const chunk = this.parseChunk(this.rawData);
             if (chunk.type === ChunkTypes_1.default.Clump) {
                 clump = chunk;
+            }
+            else if (chunk.type === ChunkTypes_1.default.UV_Animation_Dictionary) {
+                this.uvAnimationDictionary = chunk;
             }
             maxLoop--;
         }
@@ -232,6 +238,104 @@ class DFFReader {
                         type,
                     };
                     chunk.parsed = lightChunk;
+                }
+            }
+        }
+        else if (chunk.type === ChunkTypes_1.default.Anim_Animation) {
+            // Anim Animation - generic RW keyframed animation section.
+            // Sourced from Criterion's rpuvanim.h/rtanim.h (via gta-reversed) and
+            // cross-checked against https://gtamods.com/wiki/Anim_Animation_(RW_Section)
+            const content = new PointerBuffer_1.default(chunk.data);
+            const version = content.readUint32();
+            const typeID = content.readUint32();
+            const numFrames = content.readUint32();
+            const flags = content.readUint32();
+            const duration = content.readFloat();
+            // UV custom-data sub-header (_rpUVAnimCustomData, 68 bytes).
+            // "unknown" isn't pinned down yet - safe to skip.
+            const unknown = content.readUint32();
+            const name = content.readString(32);
+            const nodeToUVChannelMap = [];
+            for (let i = 0; i < 8; i++) {
+                nodeToUVChannelMap.push(content.readUint32());
+            }
+            const keyFrames = [];
+            for (let i = 0; i < numFrames; i++) {
+                const time = content.readFloat();
+                const data = [
+                    content.readFloat(), content.readFloat(), content.readFloat(),
+                    content.readFloat(), content.readFloat(), content.readFloat(),
+                ];
+                const prevFrameIndex = content.readDWORD();
+                keyFrames.push({
+                    time,
+                    data,
+                    prevFrameIndex,
+                    // Both interpretations of the same 6 floats - typeID is
+                    // supposed to say which one applies, but that mapping isn't
+                    // confirmed yet, so both are provided rather than guessing.
+                    linear: {
+                        right: { x: data[0], y: data[1] },
+                        up: { x: data[2], y: data[3] },
+                        pos: { x: data[4], y: data[5] },
+                    },
+                    param: {
+                        theta: data[0],
+                        s0: data[1],
+                        s1: data[2],
+                        skew: data[3],
+                        x: data[4],
+                        y: data[5],
+                    },
+                });
+            }
+            const animChunk = {
+                version,
+                typeID,
+                numFrames,
+                flags,
+                duration,
+                name,
+                nodeToUVChannelMap,
+                keyFrames,
+            };
+            chunk.parsed = animChunk;
+        }
+        else if (chunk.type === ChunkTypes_1.default.UV_Animation_Dictionary) {
+            // UV Animation Dictionary - same shape as every other RW list
+            // container in this file (e.g. Geometry_List): a leading Struct
+            // chunk holding just the count, followed by that many full
+            // Anim_Animation (0x1B) chunks as siblings. containerTypes already
+            // parsed all of that into childrenChunks - just read the count.
+            if (childrenChunks.length > 0) {
+                const firstChild = childrenChunks[0];
+                if (firstChild.type === ChunkTypes_1.default.Struct) {
+                    const content = new PointerBuffer_1.default(firstChild.data);
+                    const count = content.readUint32();
+                    const dictChunk = { count };
+                    chunk.parsed = dictChunk;
+                }
+            }
+        }
+        else if (chunk.type === ChunkTypes_1.default.UV_Animation_PLG) {
+            // UV Animation PLG - nested inside a Material's Extension chunk.
+            // References dictionary entries by name, one per active channel slot.
+            // Like the other list-shaped sections here, its data is a single
+            // leading Struct chunk (not a bare payload).
+            if (childrenChunks.length > 0) {
+                const firstChild = childrenChunks[0];
+                if (firstChild.type === ChunkTypes_1.default.Struct) {
+                    const content = new PointerBuffer_1.default(firstChild.data);
+                    const channelMask = content.readUint32();
+                    const channels = [];
+                    for (let slot = 0; slot < 8; slot++) {
+                        if ((channelMask & (1 << slot)) === 0) {
+                            continue;
+                        }
+                        channels.push({ slot, name: content.readString(32) });
+                    }
+                    const plgChunk = { channelMask, channels };
+                    chunk.parsed = plgChunk;
                 }
             }
         }
@@ -891,6 +995,23 @@ class DFFReader {
         }
         return matching;
     }
+    /**
+     * Looks up a UV animation by name from this file's UV Animation Dictionary
+     * (the name a material's `uvAnimation.channels[n].name` references).
+     * Returns undefined if the file has no dictionary, or no entry with that name.
+     */
+    getUVAnimation(name) {
+        var _a, _b;
+        if (!((_a = this.uvAnimationDictionary) === null || _a === void 0 ? void 0 : _a.children)) {
+            return undefined;
+        }
+        for (const child of this.uvAnimationDictionary.children) {
+            if (child.type === ChunkTypes_1.default.Anim_Animation && ((_b = child.parsed) === null || _b === void 0 ? void 0 : _b.name) === name) {
+                return child.parsed;
+            }
+        }
+        return undefined;
+    }
     getGeometry() {
         var _a, _b, _c, _d, _e;
         const geometryList = [];
@@ -967,10 +1088,12 @@ class DFFReader {
                 }
                 geometryList.push(Object.assign(Object.assign({ name: geoName }, targetGeometry.parsed), { materials: materials.filter(m => (m.parsed)).map(m => {
                         const textures = this.searchChunk(m, ChunkTypes_1.default.Texture);
+                        const uvAnimations = this.searchChunk(m, ChunkTypes_1.default.UV_Animation_PLG);
+                        const uvAnimation = uvAnimations.length > 0 ? uvAnimations[0].parsed : undefined;
                         if (textures.length > 0) {
-                            return Object.assign(Object.assign({}, m.parsed), { texture: textures.map(m => m.parsed)[0] });
+                            return Object.assign(Object.assign({}, m.parsed), { texture: textures.map(m => m.parsed)[0], uvAnimation });
                         }
-                        return Object.assign({}, m.parsed);
+                        return Object.assign(Object.assign({}, m.parsed), { uvAnimation });
                     }), nightVertexColours: extraVertColours, effect,
                     position,
                     rotationMatrix,

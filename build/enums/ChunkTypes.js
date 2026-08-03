@@ -17,10 +17,13 @@ var ChunkTypes;
     ChunkTypes[ChunkTypes["Clump"] = 16] = "Clump";
     ChunkTypes[ChunkTypes["Light"] = 18] = "Light";
     ChunkTypes[ChunkTypes["Atomic"] = 20] = "Atomic";
+    ChunkTypes[ChunkTypes["Anim_Animation"] = 27] = "Anim_Animation";
     ChunkTypes[ChunkTypes["Geometry_List"] = 26] = "Geometry_List";
     ChunkTypes[ChunkTypes["Right_To_Render"] = 31] = "Right_To_Render";
+    ChunkTypes[ChunkTypes["UV_Animation_Dictionary"] = 43] = "UV_Animation_Dictionary";
     ChunkTypes[ChunkTypes["HAnim_PLG"] = 286] = "HAnim_PLG";
     ChunkTypes[ChunkTypes["Material_Effects_PLG"] = 288] = "Material_Effects_PLG";
+    ChunkTypes[ChunkTypes["UV_Animation_PLG"] = 309] = "UV_Animation_PLG";
     ChunkTypes[ChunkTypes["Bin_Mesh_PLG"] = 1294] = "Bin_Mesh_PLG";
     ChunkTypes[ChunkTypes["Native_Data_PLG"] = 1296] = "Native_Data_PLG";
     // Rockstar Custom Sections
