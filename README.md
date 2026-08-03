@@ -141,7 +141,7 @@ Each `Geometry` object contains:
 
 ### `dff.getNode(): GeometryNode`
 
-Returns the scene hierarchy as a tree. Useful when you need parent/child frame relationships rather than a flat list.
+Returns the scene hierarchy as a tree. Useful when you need parent/child frame relationships rather than a flat list - this is the only way to reach a skinned mesh's full skeleton (see below), since `getGeometry()` only returns the one frame each mesh is actually attached to.
 
 ```ts
 interface GeometryNode {
@@ -149,9 +149,12 @@ interface GeometryNode {
   position: { x, y, z },
   rotationMatrix: { right, up, at },
   matrixFlags: number,
+  animData?: HAnimChunk,
   children: (GeometryNode | Geometry)[],
 }
 ```
+
+`animData` carries this frame's own HAnim PLG data, when present - this is how a skinned mesh's *other* bones (the ones with no geometry of their own) expose their `nodeId`. The frame conventionally named `"Root"` additionally carries the full bone table for the whole skeleton (`numNodes`/`nodes`, one entry per bone) - build a skeleton by walking the tree from there, matching each bone frame's own `animData.nodeId` against `Geometry.skin.vertexBoneIndices`/`boneInverseMatrices` (both keyed by that same ID - see `Geometry.skin`'s docs above).
 
 ---
 

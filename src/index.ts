@@ -1567,6 +1567,42 @@ class DFFReader {
 
 		const frameList = frameLists[0];
 
+		// Parallel array to frameListParsed.frames (see getGeometry()'s use
+		// of the same indexing) - needed to find each frame's own HAnim_PLG,
+		// not just the ones with an attached Atomic/Geometry.
+		const frameExtensions = this.searchChunk<{ name: string }>(frameList, ChunkTypes.Extension);
+		const getFrameHAnim = (frameIndex: number): HAnimChunk | undefined => {
+			const targetExtension = frameExtensions[frameIndex];
+			if (!targetExtension) {
+				return undefined;
+			}
+			const hAnim = this.searchChunk<HAnimChunk>(targetExtension, ChunkTypes.HAnim_PLG);
+			return hAnim.length > 0 ? hAnim[0].parsed : undefined;
+		};
+
+		// The `frameNodes` global flat search below is a *different* list
+		// than frameListParsed.frames (Frame (0x2FE) chunks can turn up
+		// elsewhere in the file too, e.g. inside a UV Animation Dictionary),
+		// so indexing into it by frame position silently pulls the wrong
+		// name on any file where the two lists don't happen to line up 1:1 -
+		// confirmed on a real skinned ped model (army.dff), where every name
+		// this produced was off by one frame. Look the name up from within
+		// this specific frame's own Extension instead (same technique
+		// getGeometry() already uses), falling back to the old global-array
+		// behaviour only if a frame genuinely has no Extension->Frame name.
+		const getFrameName = (frameIndex: number): string => {
+			const targetExtension = frameExtensions[frameIndex];
+			const extensionFrames = targetExtension ? this.searchChunk<{ name: string }>(targetExtension, ChunkTypes.Frame) : [];
+			if (extensionFrames.length > 0 && extensionFrames[0].parsed) {
+				return extensionFrames[0].parsed.name;
+			}
+			const fallback = frameNodes[frameIndex];
+			if (fallback && fallback.parsed) {
+				return fallback.parsed.name;
+			}
+			return "Unknown Frame";
+		};
+
 		if (frameList.parsed) {
 			const frameListParsed = frameList.parsed;
 
@@ -1618,17 +1654,11 @@ class DFFReader {
 					for (const mi of childFrameIndices) {
 						const fr = frameListParsed.frames[mi];
 
-						// This should probably use the Extension chunks instead.
-						const mFrame = frameNodes[mi];
-						let frameName = "Unknown Frame";
-						if (mFrame && mFrame.parsed) {
-							frameName = mFrame.parsed.name;
-						}
-
 						const mNode: GeometryNode = {
-							name: frameName,
+							name: getFrameName(mi),
 							children: getChildren(mi, depth + 1),
 
+							animData: getFrameHAnim(mi),
 							position: fr.position,
 							rotationMatrix: fr.rotationMatrix,
 							matrixFlags: fr.matrixFlags,
@@ -1647,10 +1677,10 @@ class DFFReader {
 					return children;
 				}
 	
-				const myFrame = frameNodes[myIndex];
 				const myNode: GeometryNode = {
-					name: (myFrame && myFrame.parsed && myFrame.parsed.name) || "",
+					name: getFrameName(myIndex),
 					children: getChildren(myIndex),
+					animData: getFrameHAnim(myIndex),
 					position: frame.position,
 					rotationMatrix: frame.rotationMatrix,
 					matrixFlags: frame.matrixFlags,

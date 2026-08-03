@@ -1,7 +1,9 @@
 import Geometry from "./Geometry";
+import HAnimChunk from "./chunks/HAnimChunk";
 export default interface GeometryNode {
     name: string;
     children: (GeometryNode | Geometry)[];
+    animData?: HAnimChunk;
     matrixFlags: number;
     rotationMatrix: {
         right: {
