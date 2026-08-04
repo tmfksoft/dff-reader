@@ -113,9 +113,13 @@ class DFFReader {
                 const firstChild = childrenChunks[0];
                 if (firstChild.type === ChunkTypes_1.default.Struct) {
                     const content = new PointerBuffer_1.default(firstChild.data);
+                    // RenderWare 3.4 (Vice City) grew the light/camera counts -
+                    // GTA III era clumps carry only numAtomics, so this struct
+                    // is 4 bytes there and 12 from 3.4 onwards. Reading blind
+                    // overran the struct and failed every III model outright.
                     const numAtomics = content.readUint32();
-                    const numLights = content.readUint32();
-                    const numCameras = content.readUint32();
+                    const numLights = content.hasBytes(4) ? content.readUint32() : 0;
+                    const numCameras = content.hasBytes(4) ? content.readUint32() : 0;
                     chunk.parsed = {
                         numAtomics,
                         numLights,
