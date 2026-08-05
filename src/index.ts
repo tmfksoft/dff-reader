@@ -98,7 +98,20 @@ class DFFReader {
 		const sectionType = buf.readUint32();
 		const sectionSize = buf.readUint32();
 		const sectionLibrary = buf.readUint32();
-		const sectionContent = buf.readSection(sectionSize);
+
+		// A parent's declared size can't always be trusted. Some GTA III
+		// clumps are written 12 bytes short - just enough to cover their last
+		// atomic's body but not its header - so that atomic reads past the
+		// end of the section its parent handed us. Refusing to read it threw
+		// away the whole model; 32 of gta3.img's 3138 models failed this way.
+		//
+		// Take whatever is actually there instead. The truncated tail is
+		// still long enough for the chunk's own Struct, which is the part
+		// anything downstream needs, and San Andreas files never hit this
+		// because their sizes are correct.
+		const sectionContent = (sectionSize > buf.remaining)
+			? buf.readSectionBeyond(sectionSize, this.data)
+			: buf.readSection(sectionSize);
 
 		const chunk: RawChunk = {
 			type: sectionType,
@@ -239,7 +252,12 @@ class DFFReader {
 			// Atomic
 			if (childrenChunks.length > 0 ) {
 				const firstChild = childrenChunks[0];
-				if (firstChild.type === ChunkTypes.Struct) {
+				// A clump written with a short size (see parseChunk) can leave
+				// its last atomic's struct truncated - the header survives but
+				// the body doesn't. An atomic without a frame and geometry
+				// index is unusable, so leave it unparsed for getGeometry() to
+				// skip rather than reading off the end of the buffer.
+				if (firstChild.type === ChunkTypes.Struct && firstChild.data.length >= 12) {
 					// Struct
 					const content = new PointerBuffer(firstChild.data);
 					const frameIndex = content.readUint32();

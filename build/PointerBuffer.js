@@ -11,12 +11,35 @@ class PointerBuffer {
         }
         return true;
     }
+    // How many bytes are left from the current position.
+    get remaining() {
+        return Math.max(0, this.data.length - this.pointer);
+    }
     // Whether at least `length` more bytes remain - use this instead of
     // `hasMore` before reading another whole chunk header at the top level,
     // where a handful of stray trailing/padding bytes after the last real
     // chunk shouldn't be treated as the start of one more chunk to parse.
     hasBytes(length) {
         return this.pointer + length <= this.data.length;
+    }
+    /**
+     * Reads `length` bytes from the current position, allowing the result to
+     * run past the end of this buffer's own view and into whatever follows it
+     * in the underlying data.
+     *
+     * Only for recovering from a container whose declared size is smaller
+     * than its actual contents (see DFFReader.parseChunk) - the bytes really
+     * are present in the file, this view just doesn't cover them. `limit`
+     * bounds how far it may reach, and the pointer still only advances within
+     * this view so the caller's own position stays sane.
+     */
+    readSectionBeyond(length, limit) {
+        const startInLimit = (this.data.byteOffset - limit.byteOffset) + this.pointer;
+        const available = Math.max(0, limit.length - startInLimit);
+        const take = Math.min(length, available);
+        const section = limit.subarray(startInLimit, startInLimit + take);
+        this.forward(Math.min(length, this.remaining));
+        return section;
     }
     constructor(data) {
         this.data = data;
