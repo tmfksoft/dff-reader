@@ -1114,6 +1114,30 @@ class DFFReader {
             boneInverseMatrices,
         };
     }
+    /**
+     * Raw bytes of this model's embedded vehicle collision, if it has one -
+     * a Collision_Model (0x0253F2FA) RW section, one of Rockstar's own
+     * custom chunk types (https://gtamods.com/wiki/Collision_Model_(RW_Section)),
+     * found (per that page) hanging off the Clump's own Extension in GTA:SA
+     * vehicle DFFs. This is how vehicle collision actually ships in SA - the
+     * standalone models/coll/vehicles.col most tools expect is a near-empty
+     * leftover from III/VC's pipeline, not where SA vehicles' real collision
+     * lives.
+     *
+     * The wiki page describes this section's payload as "complete with
+     * header, but only one model per section" - i.e. structurally identical
+     * to a single model entry inside a standalone .col archive (fourcc +
+     * size + name + id + body), just found in a different container. That's
+     * deliberately left for the caller to parse (e.g. with
+     * @majesticfudgie/col-reader's COLReader, unmodified) rather than
+     * reimplemented here - this module only extracts the chunk, it doesn't
+     * know the .col body format.
+     */
+    getCollisionData() {
+        var _a;
+        const matches = this.searchChunk(this.parsed, ChunkTypes_1.default.Collision_Model);
+        return (_a = matches[0]) === null || _a === void 0 ? void 0 : _a.data;
+    }
     getGeometry() {
         var _a, _b, _c, _d, _e;
         const geometryList = [];
